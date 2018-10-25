@@ -250,8 +250,8 @@ def lazy_stateTable(table):
 
 def lazy_stringStates(tokens):
     d = {}
-    states = set([])
-    substates = set([])
+    states = set()
+    substates = set()
     for s in tokens:
         if s in states:
             continue
