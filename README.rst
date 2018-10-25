@@ -29,17 +29,17 @@ Example
 _______
 
 Base use:
-```python
+.. code-block:: python
 import lazy
 
 text = r''' tes/*t t'*/e'xt /*h'g/*'jgh*/ j' kjhkj /* hlkjlkj 'hk*/jh'''
 lo = leazy(text)
-```
+
 
 Use methods:
-```python
+.. code-block:: python
 lo.map(lambda x : x + ' ')
-```
-```python
+
+
+.. code-block:: python
 lo.filter(lambda x : False)
-```
