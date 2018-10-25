@@ -29,6 +29,7 @@ Example
 _______
 
 Base use:
+
 .. code-block::
     import lazy
 
@@ -36,6 +37,7 @@ Base use:
     lo = leazy(text)
 
 Use methods:
+
 .. code-block::
     lo.map(lambda x : x + ' ')
 
