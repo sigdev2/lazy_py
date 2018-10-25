@@ -30,7 +30,8 @@ _______
 
 Base use:
 
-.. code-block::
+.. code:: python
+
     import lazy
 
     text = r''' tes/*t t'*/e'xt /*h'g/*'jgh*/ j' kjhkj /* hlkjlkj 'hk*/jh'''
@@ -38,8 +39,10 @@ Base use:
 
 Use methods:
 
-.. code-block::
+.. code:: python
+
     lo.map(lambda x : x + ' ')
 
-.. code-block::
+.. code:: python
+
     lo.filter(lambda x : False)
