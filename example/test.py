@@ -24,7 +24,7 @@ import pprint
 if __name__ == r'__main__':
     text = r''' tes/*t t'*/e'xt /*h'g/*'jgh*/ j' kjhkj /* hlkjlkj 'hk*/jh'''
 
-    pp = pprint.PrettyPrinter(depth=6)
+    pp = pprint.PrettyPrinter(indent=4, depth=6)
 
     stateParse = lazy.lazy(lazy.lazy_tokenize(text, [r'/*', r'*/', r'//', '\'\'\'', r'"""']))
     stateParse.group(lazy.lazy_stateTable(

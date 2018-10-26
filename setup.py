@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-''' Copyright 2018, SigDev
+r''' Copyright 2018, SigDev
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,32 +21,32 @@ import lazy
 
 setup(name=lazy.__name__,
       version=lazy.__version__,
-      packages=find_packages(exclude=['example']),
-      description='Lazy calculations for Python',
-      long_description=open(join(dirname(__file__), 'README.rst')).read(),
+      packages=find_packages(exclude=[r'example']),
+      description=r'Lazy calculations for Python',
+      long_description=open(join(dirname(__file__), r'README.rst')).read(),
       author=lazy.__author__,
       license=lazy.__license__,
-      url="http://github.com/sigdev2/lazy_py",
-      keywords=' '.join([
-        'python', 'lazy', 'parser', 'iterator', 'map', 'reduce', 'filter', 'parsing'
+      url=r'http://github.com/sigdev2/lazy_py',
+      keywords=r' '.join([
+        r'python', r'lazy', r'parser', r'iterator', r'map', r'reduce', r'filter', r'parsing'
         ]
       ),
       classifiers=[
-        'Intended Audience :: Developers',
-        'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        "Topic :: Software Development",
-        'Topic :: Software Development :: Libraries',
-        'Topic :: Software Development :: Libraries :: Python Modules'
-        'Topic :: Text Processing',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: Implementation :: PyPy',
+        r'Intended Audience :: Developers',
+        r'Intended Audience :: System Administrators',
+        r'License :: OSI Approved :: Apache Software License',
+        r'Operating System :: OS Independent',
+        r'Programming Language :: Python',
+        r'Topic :: Software Development',
+        r'Topic :: Software Development :: Libraries',
+        r'Topic :: Software Development :: Libraries :: Python Modules'
+        r'Topic :: Text Processing',
+        r'Programming Language :: Python :: 2.6',
+        r'Programming Language :: Python :: 2.7',
+        r'Programming Language :: Python :: 3',
+        r'Programming Language :: Python :: 3.2',
+        r'Programming Language :: Python :: 3.3',
+        r'Programming Language :: Python :: Implementation :: PyPy',
         ],
       install_requires=[],
       entry_points={},
