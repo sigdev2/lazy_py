@@ -46,3 +46,18 @@ Use methods:
 .. code:: python
 
     lo.filter(lambda x : False)
+
+.. code:: python
+
+    lo.group(lazy.lazy_stateTable(
+        [
+            [r'"', { r'none' : r'string', r'string' : r'none' }],
+            ['\'', { r'none' : r'onestring', r'onestring' : r'none' }],
+            ['\'\'\'', { r'none' : r'treeonestring', r'treeonestring' : r'none' }],
+            [r'"""', { r'none' : r'treestring', r'treestring' : r'none' }],
+            [r'/*', { r'none' : r'multi'}],
+            [r'*/', { r'multi' : r'none'}],
+            [r'//', { r'none' : r'single' }],
+            [r'#', { r'none' : r'directive' }],
+            ['\n', { r'single' : r'none', r'directive' : r'none' }]
+        ])
