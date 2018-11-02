@@ -39,7 +39,7 @@ class IteratorEx:
         self.commands = commands
         self.c = chain
 
-    def exec(self, v):
+    def lazy_exec(self, v):
         if isinstance(self.commands, list):
             exit = True
             for cmd in self.commands:
@@ -63,7 +63,7 @@ class IteratorEx:
         try:
             v = next(self.it, None)
             while v != None:
-                has, v = self.exec(v)
+                has, v = self.lazy_exec(v)
                 if has:
                     break
                 v = next(self.it, None)
@@ -104,34 +104,29 @@ class IteratorEx:
         return IteratorEx(self.obj, new_commands, self.c)
 
     def groupLiner(self, f, r, init = None):
-        state = r'none'
-        accum = deepcopy(init)
-        hasVal = False
+        local = { r'state' : r'none', r'accum' : deepcopy(init), r'hasVal' : False }
         def state_filter(v):
-            nonlocal accum
-            nonlocal hasVal
-            nonlocal state
             if v == r'__EOF':
-                if state != r'none':
-                    state = r'none'
-                    hasVal = True
-                ret = accum
-                accum = deepcopy(init)
-                if not hasVal:
+                if local[r'state'] != r'none':
+                    local[r'state'] = r'none'
+                    local[r'hasVal'] = True
+                ret = local[r'accum']
+                local[r'accum'] = deepcopy(init)
+                if not local[r'hasVal']:
                     return r'__EOF'
-                hasVal = False
+                local[r'hasVal'] = False
                 return ret
-            newstate = f(v, state)
+            newstate = f(v, local[r'state'])
             if newstate != r'none':
-                accum = r(accum, v, state)
-                state = newstate
-                hasVal = True
+                local[r'accum'] = r(local[r'accum'], v, local[r'state'])
+                local[r'state'] = newstate
+                local[r'hasVal'] = True
                 return None
-            state = newstate
+            local[r'state'] = newstate
             ret = v
-            if hasVal:
-                ret = r(accum, v, state)
-                accum = deepcopy(init)
+            if local[r'hasVal']:
+                ret = r(local[r'accum'], v, local[r'state'])
+                local[r'accum'] = deepcopy(init)
                 return ret
             return ret
 
@@ -149,41 +144,35 @@ class IteratorEx:
         return IteratorEx(self.obj, new_commands, self.c)
 
     def group(self, f, r, init = None):
-        stack = [r'none']
-        accum = deepcopy(init)
-        hasVal = False
-
+        local = { r'stack' : [r'none'], r'accum' : deepcopy(init), r'hasVal' : False }
         def state_filter(v):
-            nonlocal accum
-            nonlocal hasVal
-            nonlocal stack
-            state = stack[-1]
+            state = local[r'stack'][-1]
             if v == r'__EOF':
                 if state != r'none':
-                    stack = [r'none']
-                    hasVal = True
-                ret = accum
-                accum = deepcopy(init)
-                if not hasVal:
+                    local[r'stack'] = [r'none']
+                    local[r'hasVal'] = True
+                ret = local[r'accum']
+                local[r'accum'] = deepcopy(init)
+                if not local[r'hasVal']:
                     return r'__EOF'
-                hasVal = False
+                local[r'hasVal'] = False
                 return ret
 
             newstate = f(v, state)
             if newstate == state:
-                accum = r(accum, v, stack)
-                hasVal = True
+                local[r'accum'] = r(local[r'accum'], v, local[r'stack'])
+                local[r'hasVal'] = True
                 return None        
-            ret = accum
-            accum = deepcopy(init)
-            hasVal = False
+            ret = local[r'accum']
+            local[r'accum'] = deepcopy(init)
+            local[r'hasVal'] = False
 
-            if len(stack) > 1 and stack[-2] == newstate:
-                ret = r(ret, v, stack)
-                stack = stack[:-1]
+            if len(local[r'stack']) > 1 and local[r'stack'][-2] == newstate:
+                ret = r(ret, v, local[r'stack'])
+                local[r'stack'] = local[r'stack'][:-1]
             else:
-                stack.append(newstate)
-                accum = r(accum, v, stack)
+                local[r'stack'].append(newstate)
+                local[r'accum'] = r(local[r'accum'], v, local[r'stack'])
             return ret
 
         cmd1 = Command(state_filter , 0)
@@ -207,7 +196,7 @@ class IteratorEx:
             ret = f(ret, val)
             val = self.next()
         v = r'__EOF'
-        _, v = self.exec(v)
+        _, v = self.lazy_exec(v)
         if v != r'__EOF':
             ret = f(ret, v)
         return ret
@@ -219,7 +208,7 @@ class IteratorEx:
             f(val)
             val = self.next()
         v = r'__EOF'
-        _, v = self.exec(v)
+        _, v = self.lazy_exec(v)
         if v != r'__EOF':
             f(v)
     
