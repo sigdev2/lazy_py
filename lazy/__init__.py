@@ -16,6 +16,7 @@ r''' Copyright 2018, SigDev
    limitations under the License. '''
 
 from .lazy import *
+from .tokenizer import *
 
 __author__ = r'SigDev'
 __authors__ = r'SigDev'
