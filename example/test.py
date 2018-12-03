@@ -15,107 +15,109 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
+import unittest
+
 import os
 import sys
-import six
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), r'..')))
 import lazy
 
-def wordizerTest(text):
-    print(r' - '.join(lazy.Wordizer(text)))
+class TestLazyParsers(unittest.TestCase):
+    def test_wordize(self):
+        text = r'word1_word2_word3=CheckFunc(set="123")'
+        out = []
+        for word in lazy.Wordizer(text):
+            out.append(word)
+        self.assertEqual(out, [r'word1_word2_word3', r'=', r'CheckFunc', r'(', r'set', r'=', r'"', r'123', r'"', r')'])
 
-def tokenizerParser(text, tokens):
-    print(r' - '.join(lazy.tokenizer(text, tokens)))
+    def test_tokenize(self):
+        text = r'/*/*/*spec*/spec*/*/'
+        tokens = [lazy.Token(r'/*'),
+                lazy.Token(r'*/'),
+                lazy.Token([r'/', r'*', r'spec']),
+                lazy.Token([r'spec', r'*', r'/'])]
+        out = []
+        for word in lazy.tokenizer(text, tokens):
+            out.append(word)
+        self.assertEqual(out, [r'/*', r'/*', r'/*spec', r'*/', r'spec*/', r'*/'])
 
-def stateParserTest(text, tokens):
-    print(r' - '.join(lazy.state_tokenizer(text, tokens)))
-
-def fucArgsParserTest(text, tokens, table):
-    print(r' - '.join(lazy.table_tokenizer(text, tokens, table)))
-
-def recJoin(out, sep = r' - '):
-    if isinstance(out, six.string_types):
-        return out
-    s = r''
-    for it in out:
-        if len(s) > 0:
-            s += sep
-        if isinstance(it, six.string_types):
-            s += it
-        else:
-            s += str(it)
-    return s
-
-def recursiveParserTest(text, tokens, table):
-    print(recJoin(lazy.LL1TableTokenizer(lazy.LL1StateTokenizer(lazy.LLKGreedyTokenizer(lazy.Wordizer(text), tokens), tokens), table, True)))
-
-if __name__ == r'__main__':
-    text = r'''_tes/*t t'*/ext /*h'g/*'jgh*//*sdfsf*/ /*spec sdfss*/gdfgdfg spec*/ { sdfsdf {sdfsd} jhghg }{ sdfsdf {sdfsd} jhghg }somefunc(sdfs(dfsd(f))'sdfsdf)') j' kjhkj /* hlkjlkj 'hk*/jh'''
-    tokens = [lazy.Token(r'/*', [r'start'], [r'mult']),
-              lazy.Token(r'*/', [r'end'], [r'mult']),
-              lazy.Token('\'', [r'end', r'start'], [r'onestring']),
-              lazy.Token([r'/', r'*', r'spec'], [r'start'], [r'spec']),
-              lazy.Token([r'spec', r'*', r'/'], [r'end'], [r'spec'])]
+    def test_tokenize_liner_state(self):
+        text = r'/* comment /*spec "quoted comment */"quoted comment*/ /*spec text"/*spec "quoted spec comment*/ spec*/'
+        tokens = [lazy.Token(r'/*', [r'start'], [r'mult']),
+                lazy.Token(r'*/', [r'end'], [r'mult']),
+                lazy.Token(r'"', [r'end', r'start'], [r'string']),
+                lazy.Token([r'/', r'*', r'spec'], [r'start'], [r'spec']),
+                lazy.Token([r'spec', r'*', r'/'], [r'end'], [r'spec'])]
+        out = []
+        for word in lazy.state_tokenizer(text, tokens):
+            out.append(word)
+        self.assertEqual(out, [r'/* comment /*spec "quoted comment */', r'"quoted comment*/ /*spec text"', r'/*spec "quoted spec comment*/ spec*/'])
     
-    tokensArgs = [
-              lazy.Token([r'somefunc', r'(']),
-              lazy.Token('\'', [r'end', r'start'], [r'onestring']),
-              lazy.Token(r'/*', [r'start'], [r'mult']),
-              lazy.Token(r'*/', [r'end'], [r'mult']),
-              lazy.Token([r'/', r'*', r'spec'], [r'start'], [r'spec']),
-              lazy.Token([r'spec', r'*', r'/'], [r'end'], [r'spec'])]
-    
-    local = { r'count': 0, r'count_rec': 0 }
-    
-    def args(val, state):
-        if state == r'none':
-            if False:
+    def test_tokenize_state_table(self):
+        tokens = [lazy.Token(r'/*', [r'start'], [r'mult']),
+                lazy.Token(r'*/', [r'end'], [r'mult']),
+                lazy.Token(r'\"'),
+                lazy.Token(r'somefunc('),
+                lazy.Token(r'"', [r'end', r'start'], [r'string'])]
+
+        local = { r'count': 0 }
+
+        def args(val, state):
+            if state == r'none':
+                if False:
+                    if val == r'(':
+                        local[r'count'] += 1
+                        return r'in_args'
+            elif state == r'in_args':
                 if val == r'(':
                     local[r'count'] += 1
-                    return r'in_args'
-        elif state == r'in_args':
-            if val == r'(':
+                elif val == r')':
+                    local[r'count'] -= 1
+                if local[r'count'] <= 0:
+                    return r'none'
+            return state
+        
+        def function(val, state):
+            if state == r'none':
                 local[r'count'] += 1
-            elif val == r')':
-                local[r'count'] -= 1
-            if local[r'count'] <= 0:
-                return r'none'
-        return state
-    
-    def recursiveArgs(val, state):
-        if val == r'{':
-            local[r'count_rec'] += 1
-            return r'in_args' + str(local[r'count_rec'])
-        elif val == r'}':
-            local[r'count_rec'] -= 1
-            if local[r'count_rec'] <= 0:
-                return r'none'
-            return r'in_args' + str(local[r'count_rec'])
-        return state
-    
-    def function(val, state):
-        if state == r'none':
-            local[r'count'] += 1
-            return r'in_args'
-        return state
-    table = [
-        [r'somefunc(', function],
-        [r'(', args],
-        [r')', args],
-    ]
+                return r'in_args'
+            return state
+        table = [
+            [r'somefunc(', function],
+            [r'(', args],
+            [r')', args],
+        ]
 
-    recTable=[
-        [r'{', recursiveArgs],
-        [r'}', recursiveArgs]
-    ]
+        text = r'var b()=somefunc(arg1="somefunc() {}", arg2 = call_other(")\""), end_arg)'
+        out = []
+        for word in lazy.table_tokenizer(text, tokens, table):
+            out.append(word)
+        self.assertEqual(out, [r'var', r' ', r'b', r'(', r')', r'=', r'somefunc(arg1="somefunc() {}", arg2 = call_other(")\""), end_arg)'])
 
-    wordizerTest(text)
-    print(r'')
-    tokenizerParser(text, tokens)
-    print(r'')
-    stateParserTest(text, tokens)
-    print(r'')
-    fucArgsParserTest(text, tokensArgs, table)
-    print(r'')
-    recursiveParserTest(text, tokensArgs, recTable)
-    print(r'')
+    def test_tokenize_recursive_table(self):
+        tokens = [lazy.Token(r'"', [r'end', r'start'], [r'string'])]
+        local = { r'count_rec': 0 }
+        def recursiveArgs(val, state):
+            if val == r'{':
+                local[r'count_rec'] += 1
+                return r'in_args' + str(local[r'count_rec'])
+            elif val == r'}':
+                local[r'count_rec'] -= 1
+                if local[r'count_rec'] <= 0:
+                    return r'none'
+                return r'in_args' + str(local[r'count_rec'])
+            return state
+
+        recTable=[
+            [r'{', recursiveArgs],
+            [r'}', recursiveArgs]
+        ]
+
+        out = []
+        text = r'namespace{class{func1{var var1="{"}func2{var var2="}"}}}'
+        for word in lazy.LL1TableTokenizer(lazy.LL1StateTokenizer(lazy.Wordizer(text), tokens), recTable, True):
+            out.append(word)
+        self.assertEqual(out, [r'nmespace', [r'{', r'class', [r'{', r'func1', [r'{', r'var', r' ', r'var1', r'"{"', r'}'], r'func2', [r'{', r'var', r' ', r'var2', r'"}"', r'}'], r'}'] , r'}']])
+
+if __name__ == r'__main__':
+    unittest.main()
