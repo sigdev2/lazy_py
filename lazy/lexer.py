@@ -155,7 +155,7 @@ class Grammar(GrammarItem):
         first = None
         terms = {}
         for token in tokenizer:
-            if (token[0] == r'=' or (token[1] == r'=' and (token[0] == r'|' or token[0] == r'@' or token[0] == r'?'))) and token[-1] == r';':
+            if (token[0] == r'=' or token[0] == r'|=' or token[0] == r'?=' or token[0] == r'@=') and token[-1] == r';':
                 term_name = buffer.strip()
                 buffer = r''
                 if term_name.find(r' ') != -1 or term_name in terms:

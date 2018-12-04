@@ -146,15 +146,11 @@ class LL1TableTokenizer(Grouper):
         if allstak:
             return self.__compileStackedBuffer(buff, allstak)
         return buff
-    
-    def __lastDownFloor(self, stack, n = 0):
-        if n == 0:
-            return stack
-        return self.__lastDownFloor(stack[-1], n - 1)
 
     def  __iter__(self):
-        local = { r'stack' : [r'none'], r'stack_buffer' : [[]], r'up': True }
+        local = { r'stack' : [r'none'], r'stack_buffer' : [[]], r'up': None }
         def stateFilter(v, buff):
+            local[r'up'] = None
             for val in self.__table:
                 token = val[0]
                 if (hasattr(token, r'check') and token.check(v)) or token == v:
@@ -202,14 +198,13 @@ class LL1TableTokenizer(Grouper):
                     return r''.join(buff)
             else:
                 if self.__recursive:
-                    if len(buff) == 1:
-                        local[r'stack_buffer'][-1].append(buff[0])
-                    elif local[r'up']:
+                    if local[r'up'] == None:
+                        local[r'stack_buffer'][-1] += buff
+                    elif local[r'up'] == True:
                         local[r'stack_buffer'][-2] += buff[:-1]
                         local[r'stack_buffer'][-1].append(buff[-1])
                     else:
-                        floor = self.__lastDownFloor(local[r'stack_buffer'], len(local[r'stack_buffer']))
-                        floor += buff
+                        local[r'stack_buffer'][-1][-1] += buff
                 else:
                     local[r'stack_buffer'][-1] += buff
 

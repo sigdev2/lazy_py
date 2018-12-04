@@ -114,10 +114,13 @@ class TestLazyParsers(unittest.TestCase):
         ]
 
         out = []
-        text = r'namespace{class{func1{var var1="{"}func2{var var2="}"}}}'
+        text = r'namespace1{class{func1{var var1="{"}func2{var var2="}"}}}'
+        text += r'namespace2{class{func1{var var1="{"}func2{var var2="}"}}}'
+        text = r'global_namespace{' + text + r'}'
         for word in lazy.LL1TableTokenizer(lazy.LL1StateTokenizer(lazy.Wordizer(text), tokens), recTable, True):
             out.append(word)
-        self.assertEqual(out, [r'nmespace', [r'{', r'class', [r'{', r'func1', [r'{', r'var', r' ', r'var1', r'"{"', r'}'], r'func2', [r'{', r'var', r' ', r'var2', r'"}"', r'}'], r'}'] , r'}']])
+        self.assertEqual(out, [r'global_namespace', [r'{', r'namespace1', [r'{', r'class', [r'{', r'func1', [r'{', r'var', r' ', r'var1', r'=', r'"{"', r'}'], r'func2', [r'{', r'var', r' ', r'var2', r'=', r'"}"', r'}'], r'}'] , r'}']] +
+            [r'namespace2', [r'{', r'class', [r'{', r'func1', [r'{', r'var', r' ', r'var1', r'=', r'"{"', r'}'], r'func2', [r'{', r'var', r' ', r'var2', r'=', r'"}"', r'}'], r'}'] , r'}'], r'}']])
 
 if __name__ == r'__main__':
-    unittest.main()
+    unittest.main(exit=False)
