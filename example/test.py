@@ -22,43 +22,43 @@ import sys
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), r'..')))
 import lazy
 
-class TestLazyParsers(unittest.TestCase):
+class TestLazyTokenizer(unittest.TestCase):
     def test_wordize(self):
         text = r'word1_word2_word3=CheckFunc(set="123")'
         out = []
-        for word in lazy.Wordizer(text):
+        for word in lazy.tokenizer.Wordizer(text):
             out.append(word)
         self.assertEqual(out, [r'word1_word2_word3', r'=', r'CheckFunc', r'(', r'set', r'=', r'"', r'123', r'"', r')'])
 
     def test_tokenize(self):
         text = r'/*/*/*spec*/spec*/*/'
-        tokens = [lazy.Token(r'/*'),
-                lazy.Token(r'*/'),
-                lazy.Token([r'/', r'*', r'spec']),
-                lazy.Token([r'spec', r'*', r'/'])]
+        tokens = [lazy.tokenizer.Token(r'/*'),
+                lazy.tokenizer.Token(r'*/'),
+                lazy.tokenizer.Token([r'/', r'*', r'spec']),
+                lazy.tokenizer.Token([r'spec', r'*', r'/'])]
         out = []
-        for word in lazy.tokenizer(text, tokens):
+        for word in lazy.tokenizer.tokenizer(text, tokens):
             out.append(word)
         self.assertEqual(out, [r'/*', r'/*', r'/*spec', r'*/', r'spec*/', r'*/'])
 
     def test_tokenize_liner_state(self):
         text = r'/* comment /*spec "quoted comment */"quoted comment*/ /*spec text"/*spec "quoted spec comment*/ spec*/'
-        tokens = [lazy.Token(r'/*', [r'start'], [r'mult']),
-                lazy.Token(r'*/', [r'end'], [r'mult']),
-                lazy.Token(r'"', [r'end', r'start'], [r'string']),
-                lazy.Token([r'/', r'*', r'spec'], [r'start'], [r'spec']),
-                lazy.Token([r'spec', r'*', r'/'], [r'end'], [r'spec'])]
+        tokens = [lazy.tokenizer.Token(r'/*', [r'start'], [r'mult']),
+                lazy.tokenizer.Token(r'*/', [r'end'], [r'mult']),
+                lazy.tokenizer.Token(r'"', [r'end', r'start'], [r'string']),
+                lazy.tokenizer.Token([r'/', r'*', r'spec'], [r'start'], [r'spec']),
+                lazy.tokenizer.Token([r'spec', r'*', r'/'], [r'end'], [r'spec'])]
         out = []
-        for word in lazy.state_tokenizer(text, tokens):
+        for word in lazy.tokenizer.state_tokenizer(text, tokens):
             out.append(word)
         self.assertEqual(out, [r'/* comment /*spec "quoted comment */', r'"quoted comment*/ /*spec text"', r'/*spec "quoted spec comment*/ spec*/'])
-    
+
     def test_tokenize_state_table(self):
-        tokens = [lazy.Token(r'/*', [r'start'], [r'mult']),
-                lazy.Token(r'*/', [r'end'], [r'mult']),
-                lazy.Token(r'\"'),
-                lazy.Token(r'somefunc('),
-                lazy.Token(r'"', [r'end', r'start'], [r'string'])]
+        tokens = [lazy.tokenizer.Token(r'/*', [r'start'], [r'mult']),
+                lazy.tokenizer.Token(r'*/', [r'end'], [r'mult']),
+                lazy.tokenizer.Token(r'\"'),
+                lazy.tokenizer.Token(r'somefunc('),
+                lazy.tokenizer.Token(r'"', [r'end', r'start'], [r'string'])]
 
         local = { r'count': 0 }
 
@@ -90,12 +90,12 @@ class TestLazyParsers(unittest.TestCase):
 
         text = r'var b()=somefunc(arg1="somefunc() {}", arg2 = call_other(")\""), end_arg)'
         out = []
-        for word in lazy.table_tokenizer(text, tokens, table):
+        for word in lazy.tokenizer.table_tokenizer(text, tokens, table):
             out.append(word)
         self.assertEqual(out, [r'var', r' ', r'b', r'(', r')', r'=', r'somefunc(arg1="somefunc() {}", arg2 = call_other(")\""), end_arg)'])
 
     def test_tokenize_recursive_table(self):
-        tokens = [lazy.Token(r'"', [r'end', r'start'], [r'string'])]
+        tokens = [lazy.tokenizer.Token(r'"', [r'end', r'start'], [r'string'])]
         local = { r'count_rec': 0 }
         def recursiveArgs(val, state):
             if val == r'{':
@@ -108,7 +108,7 @@ class TestLazyParsers(unittest.TestCase):
                 return r'in_args' + str(local[r'count_rec'])
             return state
 
-        recTable=[
+        table=[
             [r'{', recursiveArgs],
             [r'}', recursiveArgs]
         ]
@@ -117,10 +117,19 @@ class TestLazyParsers(unittest.TestCase):
         text = r'namespace1{class{func1{var var1="{"}func2{var var2="}"}}}'
         text += r'namespace2{class{func1{var var1="{"}func2{var var2="}"}}}'
         text = r'global_namespace{' + text + r'}'
-        for word in lazy.LL1TableTokenizer(lazy.LL1StateTokenizer(lazy.Wordizer(text), tokens), recTable, True):
+        for word in lazy.tokenizer.table_tokenizer(text, tokens, table, True):
             out.append(word)
         self.assertEqual(out, [r'global_namespace', [r'{', r'namespace1', [r'{', r'class', [r'{', r'func1', [r'{', r'var', r' ', r'var1', r'=', r'"{"', r'}'], r'func2', [r'{', r'var', r' ', r'var2', r'=', r'"}"', r'}'], r'}'] , r'}']] +
             [r'namespace2', [r'{', r'class', [r'{', r'func1', [r'{', r'var', r' ', r'var1', r'=', r'"{"', r'}'], r'func2', [r'{', r'var', r' ', r'var2', r'=', r'"}"', r'}'], r'}'] , r'}'], r'}']])
+
+class TestLazyParser(unittest.TestCase):
+    def test_simple_grammar(self):
+        grammar = lazy.parser.Grammar(r'''
+:number = /\d/;
+root = number/\s*/+/\s*/number;
+''')
+        text = r'1 + 1'
+        self.assertTrue(grammar.check(text))
 
 if __name__ == r'__main__':
     unittest.main(exit=False)

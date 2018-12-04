@@ -18,7 +18,7 @@ r''' Copyright 2018, SigDev
 import itertools
 import copy
 
-from .tokenizer import Token, state_tokenizer
+from .tokenizer import Token, state_tokenizer, LL1TableTokenizer, LL1StateTokenizer
 
 class GrammarContext:
     def __init__(self, data, pos = 0):
@@ -78,7 +78,7 @@ class GrammarItem(Token):
                 if token.name != None and len(token.name) > 0:
                     if isinstance(self.data, list):
                         self.data = {}
-                    self.data[token.name] = token.data
+                    self.data[token.name] = copy.deepcopy(token.data)
                 ctx.it = recCtx.it
                 return True
             return False
@@ -137,41 +137,87 @@ class Grammar(GrammarItem):
         super(Grammar, self).__init__(self.__parse(text), r'root')
     
     def __parse(self, text):
+        screened = [Token(r'\/'),
+            Token(r'\='),
+            Token(r'\;'),
+            Token(r'\|'),
+            Token(r'\{'),
+            Token(r'\}')]
         exclude_tokens = [Token(r'#', [r'start'], [r'comment']),
-              Token(r'\n', [r'end'], [r'comment']),
-              Token(r'/', [r'setart', r'end'], [r'regexp']),
-              Token(r'\/'),
-              Token(r'\='),
-              Token(r'\;')]
-        expr_tokens = [Token(r'=', [r'start'], [r'list']),
-                Token([r'|', r'='], [r'start'], [r'or']),
-                Token([r'?', r'='], [r'start'], [r'maybe']),
-                Token([r'@', r'='], [r'start'], [r'repeat']),
-                Token(r';', [r'end'], [r'or', r'list', r'maybe', r'repeat'])]
-        tokenizer = state_tokenizer(text, exclude_tokens)
-        tokenizer = iter(tokenizer).filter(lambda x: x[0] == r'#')
-        tokenizer = state_tokenizer(tokenizer, expr_tokens)
+            Token(r'\n', [r'end'], [r'comment']),
+            Token(r'/', [r'start', r'end'], [r'regexp']),
+            Token([r'?', r'='])]
+        table = [
+            [r'=', { r'none' : r'list' }],
+            [r'?=', { r'none' : r'maybe' }],
+            [r';', { r'maybe' : r'none', r'list' : r'none' }]]
+        
+        repeat_tokens = [Token(r'{', [r'start'], [r'delimetr']),
+            Token(r'}', [r'end'], [r'delimetr'])]
+
+        tokenizer = state_tokenizer(text, exclude_tokens + screened)
+        tokenizer = iter(tokenizer).filter(lambda x: x[0] != r'#')
+        tokenizer = LL1TableTokenizer(tokenizer, table, True)
+
         buffer = r''
-        first = None
+        last = None
         terms = {}
         for token in tokenizer:
-            if (token[0] == r'=' or token[0] == r'|=' or token[0] == r'?=' or token[0] == r'@=') and token[-1] == r';':
-                term_name = buffer.strip()
+            if r''.join(token).strip() == r'':
+                continue
+            if (token[0] == r'=' or token[0] == r'?=') and token[-1] == r';':
+                term_name = buffer
+                to_out = term_name[0] == r':'
+                if to_out:
+                    term_name = term_name[1:]
                 buffer = r''
                 if term_name.find(r' ') != -1 or term_name in terms:
                     continue
+
+                term_type = r'list'
                 tokens = []
-                for term in token[1:-1]:
+                or_buffer = []
+                repeat_token = None
+                for term in LL1StateTokenizer(token[1:-1], repeat_tokens):
+                    if term.strip() == r'':
+                        continue
+                    elif term[0] == r'{' and term[-1] == r'}':
+                        repeat_token = term[1:-1]
+                        continue
+                    elif term == r'|':
+                        term_type = r'or'
+                        tokens.append(GrammarItem(or_buffer))
+                        or_buffer = []
+                        continue
+
+                    for sch in screened:
+                        if term == sch.token:
+                            term = sch.token[1:]
+                            break
+
                     if term in terms:
-                        tokens.append(terms)
+                        or_buffer.append(terms[term])
                     else:
-                        tokens.append(Token(term))
-                if first == None:
-                    first = tokens
-                    terms[term_name] = self
-                    self.name = term_name
-                else:
-                    terms[term_name] = GrammarItem(tokens)
+                        or_buffer.append(Token(term))
+                if len(or_buffer) > 0:
+                    if term_type == r'or':
+                        tokens.append(GrammarItem(or_buffer))
+                    else:
+                        tokens = or_buffer
+                
+                if repeat_token != None: # is repeat
+                    tokens = [GrammarItem(tokens, None, term_type)]
+                    term_type = r'repeat'
+
+                if token[0] == r'?=': # is maybe
+                    tokens = [GrammarItem(tokens, None, term_type)]
+                    term_type = r'maybe'
+
+                last = GrammarItem(tokens, term_name if to_out else None, term_type, {} if repeat_token == None else {r'delimetr' : repeat_token})
+                terms[term_name] = last
             else:
-                buffer += token
-        return [] if first == None else first
+                buffer += r''.join(token)
+        return [] if last == None else [last]
+
+if __name__ == r'__main__':
+    pass

@@ -27,41 +27,42 @@ class Token:
         except:
             rx_obj = re.Pattern
         
-        if callable(token):
-            self.check = token
-            self.part = token
-            self.type = r'func'
-        elif isinstance(token, rx_obj):
-            self.type = r'rx'
-            self.check = lambda v: token.match(r''.join(v) if isinstance(v, list) else v)
-            self.part = lambda v: token.match(r''.join(v) if isinstance(v, list) else v)
-        elif isinstance(token, list) and len(token) == 2 and isinstance(token[0], rx_obj) and isinstance(token[1], rx_obj):
-            self.check = lambda v: token[0].match(r''.join(v) if isinstance(v, list) else v)
-            self.part = lambda v: token[1].match(r''.join(v) if isinstance(v, list) else v)
-            self.type = r'rx'
-        elif isinstance(token, list) and len(token) == 2 and callable(token[0]) and callable(token[1]):
-            self.type = r'func'
-            self.check = token[0]
-            self.part = token[1]
-        elif len(token) > 2 and token[0] == r'/' and token[-1] == r'/':
-            self.type = r'rx'
-            rx = re.compile(token)
-            self.check = lambda v: rx.match(r''.join(v) if isinstance(v, list) else v)
-            self.part = lambda v: rx.match(r''.join(v) if isinstance(v, list) else v)
-        elif isinstance(token, list) and len(token) == 2 and len(token[0]) > 2 and token[0][0] == r'/' and token[0][-1] == r'/' and len(token[1]) > 2 and token[1][0] == r'/' and token[1][-1] == r'/':
-            self.type = r'rx'
-            rx1 = re.compile(token[0])
-            rx2 = re.compile(token[1])
-            self.check = lambda v: rx1.match(r''.join(v) if isinstance(v, list) else v)
-            self.part = lambda v: rx2.match(r''.join(v) if isinstance(v, list) else v)
-        elif isinstance(token, list):
-            self.type = r'list'
-            self.check = lambda v: r''.join(token) == r''.join(v)
-            self.part = lambda v: r''.join(token[:len(v)] if isinstance(v, list) else token[:1]) == r''.join(v)
-        elif token != None:
-            self.type = r'str'
-            self.check = lambda v: token == (r''.join(v) if isinstance(v, list) else v)
-            self.part = lambda v: token.startswith(r''.join(v) if isinstance(v, list) else v)
+        if token != None:
+            if callable(token):
+                self.check = token
+                self.part = token
+                self.type = r'func'
+            elif isinstance(token, rx_obj):
+                self.type = r'rx'
+                self.check = lambda v: token.match(r''.join(v) if isinstance(v, list) else v)
+                self.part = lambda v: token.match(r''.join(v) if isinstance(v, list) else v)
+            elif isinstance(token, list) and len(token) == 2 and isinstance(token[0], rx_obj) and isinstance(token[1], rx_obj):
+                self.check = lambda v: token[0].match(r''.join(v) if isinstance(v, list) else v)
+                self.part = lambda v: token[1].match(r''.join(v) if isinstance(v, list) else v)
+                self.type = r'rx'
+            elif isinstance(token, list) and len(token) == 2 and callable(token[0]) and callable(token[1]):
+                self.type = r'func'
+                self.check = token[0]
+                self.part = token[1]
+            elif len(token) > 2 and token[0] == r'/' and token[-1] == r'/':
+                self.type = r'rx'
+                rx = re.compile(token[1:-1])
+                self.check = lambda v: rx.match(r''.join(v) if isinstance(v, list) else v)
+                self.part = lambda v: rx.match(r''.join(v) if isinstance(v, list) else v)
+            elif isinstance(token, list) and len(token) == 2 and len(token[0]) > 2 and token[0][0] == r'/' and token[0][-1] == r'/' and len(token[1]) > 2 and token[1][0] == r'/' and token[1][-1] == r'/':
+                self.type = r'rx'
+                rx1 = re.compile(token[0][1:-1])
+                rx2 = re.compile(token[1][1:-1])
+                self.check = lambda v: rx1.match(r''.join(v) if isinstance(v, list) else v)
+                self.part = lambda v: rx2.match(r''.join(v) if isinstance(v, list) else v)
+            elif isinstance(token, list):
+                self.type = r'list'
+                self.check = lambda v: r''.join(token) == r''.join(v)
+                self.part = lambda v: r''.join(token[:len(v)] if isinstance(v, list) else token[:1]) == r''.join(v)
+            else:
+                self.type = r'str'
+                self.check = lambda v: token == (r''.join(v) if isinstance(v, list) else v)
+                self.part = lambda v: token.startswith(r''.join(v) if isinstance(v, list) else v)
 
         self.types = set(types)
         self.state = token if state == None else state
@@ -329,8 +330,8 @@ def tokenizer(text, tokens):
 def state_tokenizer(text, tokens):
     return LL1StateTokenizer(LLKGreedyTokenizer(Wordizer(text), tokens), tokens)
 
-def table_tokenizer(text, tokens, table):
-    return LL1TableTokenizer(LL1StateTokenizer(LLKGreedyTokenizer(Wordizer(text), tokens), tokens), table)
+def table_tokenizer(text, tokens, table, rec=False):
+    return LL1TableTokenizer(LL1StateTokenizer(LLKGreedyTokenizer(Wordizer(text), tokens), tokens), table, rec)
 
 if __name__ == r'__main__':
     pass

@@ -16,7 +16,8 @@ r''' Copyright 2018, SigDev
    limitations under the License. '''
 
 from .lazy import *
-from .tokenizer import *
+from . import tokenizer
+from . import parser
 
 __author__ = r'SigDev'
 __authors__ = r'SigDev'
@@ -30,8 +31,6 @@ __maintainer__ = r'SigDev'
 __email__ = r''
 __status__ = r'Alpha'
 __date__ = r'25.10.2018'
-__all__ = [r'IteratorEx', r'Command',
-           r'Grouper', r'Wordizer',
-           r'LL1StateTokenizer', r'LL1TableTokenizer',
-           r'Token', r'SubToken', r'LLKTokenizer', r'LLKGreedyTokenizer',
-           r'stateTable', r'stringStates', r'tokenizer', r'state_tokenizer', r'table_tokenizer']
+__all__ = [r'IteratorEx', r'Command', r'Sublist', r'IteratorsTree',
+           r'tokenizer',
+           r'parser']
