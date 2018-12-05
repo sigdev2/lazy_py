@@ -22,6 +22,8 @@ from .tokenizer import Token, state_tokenizer, LL1TableTokenizer, LL1StateTokeni
 
 class GrammarContext:
     def __init__(self, data, pos = 0):
+        if isinstance(data, GrammarContext):
+            self.it = data.it
         if hasattr(data, r'__next__'):
             self.it = data
         else:
