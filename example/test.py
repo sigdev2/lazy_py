@@ -125,11 +125,17 @@ class TestLazyTokenizer(unittest.TestCase):
 class TestLazyParser(unittest.TestCase):
     def test_simple_grammar(self):
         grammar = lazy.parser.Grammar(r'''
+:op = +;
 :number = /\d/;
-root = number/\s*/+/\s*/number;
+root = number/\s*/op/\s*/number;
 ''')
         text = r'1 + 1'
-        self.assertTrue(grammar.check(text))
+        out = lazy.parser.ParserData()
+        self.assertTrue(grammar.check(text, False, out))
+        ret = -1
+        if out.properties[r'op'] == r'+':
+            ret = int(out.properties[r'number'][0]) + int(out.properties[r'number'][1])
+        self.assertEqual(ret, 2)
 
 if __name__ == r'__main__':
     unittest.main(exit=False)

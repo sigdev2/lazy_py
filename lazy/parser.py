@@ -46,6 +46,59 @@ class GrammarContext:
             return (None, None)
         return (val, next_it)
 
+class ParserData:
+    def __init__(self):
+        self.tokens = []
+        self.properties = {}
+        self.is_merged = set()
+    
+    def simplefy(self):
+        val = self
+        if len(val.properties) <= 0:
+            val = val.tokens
+            if len(val) == 1:
+                val = val[0]
+        return val
+    
+    def get_property(self, key):
+        if key in self.properties:
+            val = self.properties[key]
+            if isinstance(val, ParserData):
+                val = val.simplefy()
+            return val
+        return None
+    
+    def add(self, token):
+        self.tokens.append(token)
+    
+    def add_property(self, key, value):
+        if isinstance(value, ParserData):
+            value = value.simplefy()
+        if key in self.properties:
+            if key in self.is_merged:
+                self.properties[key].append(value)
+            else:
+                self.properties[key] = [self.properties[key], value]
+                self.is_merged.add(key)
+        else:
+            self.properties[key] = value
+        self.tokens.append((self, key))
+    
+    def update(self, other):
+        for key in other.properties.keys():
+            first = []
+            if key in self.properties:
+                first = self.get_property(key)
+                if not key in self.is_merged:
+                    first = [first]
+            second = other.get_property(key)
+            if not key in other.is_merged:
+                second = [second]
+            merged = first + second
+            if len(merged) == 1:
+                merged = merged[0]
+            self.properties[key] = merged
+        self.is_merged = self.is_merged | other.is_merged
 
 # LALR(1)
 class GrammarItem(Token):
@@ -60,25 +113,24 @@ class GrammarItem(Token):
         self.name = name
         self.item_type = item_type
         self.info = info
-
-        self.data = []
     
     def __part(self, data):
         return self.__check(data, True)
 
-    def __token_check(self, ctx, is_part = False):
+    def __token_check(self, ctx, is_part = False, out = ParserData()):
         token = self.tokens[ctx.pos]
         if isinstance(token, GrammarItem):
             recCtx = ctx.__copy__()
-            if token.check(recCtx, is_part):
+            child_out = ParserData()
+            if token.check(recCtx, is_part, child_out):
                 if is_part:
                     _, is_end = recCtx.next_detached()
                     if is_end != None:
                         return False
                 if token.name != None and len(token.name) > 0:
-                    if isinstance(self.data, list):
-                        self.data = {}
-                    self.data[token.name] = copy.deepcopy(token.data)
+                    out.add_property(token.name, child_out)
+                else:
+                    out.update(child_out)
                 ctx.it = recCtx.it
                 return True
             return False
@@ -87,18 +139,18 @@ class GrammarItem(Token):
             if next_it == None:
                 return is_part
             if (hasattr(token, r'check') and token.check(val)) or token == val:
-                if isinstance(self.data, list):
-                    self.data.append(val)
+                if self.name != None and len(self.name) > 0:
+                    out.add(val)
                 ctx.it = next_it
                 return True
         return False
     
-    def __op(self, context, l, is_part):
+    def __op(self, context, l, is_part, out = ParserData()):
         if self.item_type == r'or':
-            if self.__token_check(context, is_part):
+            if self.__token_check(context, is_part, out):
                 return True
         elif self.item_type == r'repeat':
-            if self.__token_check(context, is_part):
+            if self.__token_check(context, is_part, out):
                 if context.pos + 1 == l:
                     delim, delim_it = context.next_detached()
                     if delim == self.info[r'delimetr']:
@@ -109,10 +161,10 @@ class GrammarItem(Token):
             else:
                 return False
         elif self.item_type == r'maybe':
-            self.__token_check(context, is_part)
+            self.__token_check(context, is_part, out)
             return True
         else: # self.item_type == r'list'
-            if self.__token_check(context, is_part):
+            if self.__token_check(context, is_part, out):
                 if context.pos + 1 == l:
                     return True
             else:
@@ -120,13 +172,13 @@ class GrammarItem(Token):
         
         return None
 
-    def __check(self, data, is_part = False):
+    def __check(self, data, is_part = False, out = ParserData()):
         context = GrammarContext(data)
         l = len(self.tokens)
         while True:
             if context.pos >= l:
                 break
-            ret = self.__op(context, l, is_part)
+            ret = self.__op(context, l, is_part, out)
             if ret != None:
                return ret
             context.pos += 1
