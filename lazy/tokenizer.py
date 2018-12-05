@@ -152,63 +152,69 @@ class LL1TableTokenizer(Grouper):
         local = { r'stack' : [r'none'], r'stack_buffer' : [[]], r'up': None }
         def stateFilter(v, buff):
             local[r'up'] = None
+            stack = local[r'stack']
+            buffer = local[r'stack_buffer']
+            old_state = stack[-1]
             for val in self.__table:
                 token = val[0]
                 if (hasattr(token, r'check') and token.check(v)) or token == v:
                     stateTable = val[1]
+                    newstate = old_state
                     if callable(stateTable):
-                        newstate = stateTable(v, local[r'stack'][-1])
-                    else:
-                        newstate = stateTable[local[r'stack'][-1]]
-                    if local[r'stack'][-1] != newstate:
-                        if local[r'stack'][-1] == r'none':
-                            local[r'stack'].append(newstate)
-                            local[r'stack_buffer'].append([])
+                        newstate = stateTable(v, old_state)
+                    elif old_state in stateTable:
+                        newstate = stateTable[old_state]
+                    if old_state != newstate:
+                        if old_state == r'none':
+                            stack.append(newstate)
+                            buffer.append([])
                             local[r'up'] = True
                         else:
                             if newstate == r'none':
-                                local[r'stack'] = [r'none']
-                                local[r'stack_buffer'] = self.__compileStackedBuffer(local[r'stack_buffer'], True)
+                                stack.clear()
+                                stack.append(r'none')
+                                self.__compileStackedBuffer(buffer, True)
                                 local[r'up'] = False
-                            elif len(local[r'stack']) > 1 and local[r'stack'][-2] == newstate:
-                                local[r'stack'] = local[r'stack'][:-1]
-                                local[r'stack_buffer'] = self.__compileStackedBuffer(local[r'stack_buffer'])
+                            elif len(stack) > 1 and stack[-2] == newstate:
+                                stack.pop()
+                                self.__compileStackedBuffer(buffer)
                                 local[r'up'] = False
                             else:
-                                local[r'stack'].append(newstate)
-                                local[r'stack_buffer'].append([])
+                                stack.append(newstate)
+                                buffer.append([])
                                 local[r'up'] = True
                         return False
                     break
-            return local[r'stack'][-1] != r'none'
+            return old_state != r'none'
     
         def bufferFunc(buff, done):
             if len(buff) == 0:
                 return False
 
+            buffer = local[r'stack_buffer']
+            top_buff = buffer[-1]
             if local[r'stack'][-1] == r'none':
-                if len(local[r'stack_buffer']) > 0 and len(local[r'stack_buffer'][-1]) > 0:
-                    local[r'stack_buffer'][-1] += buff
+                if len(buffer) > 0 and len(top_buff) > 0:
+                    top_buff += buff
                     if self.__recursive:
-                        out = copy.deepcopy(local[r'stack_buffer'][-1])
+                        out = copy.deepcopy(top_buff)
                     else:
-                        out = r''.join(local[r'stack_buffer'][-1])
-                    local[r'stack_buffer'].pop()
+                        out = r''.join(top_buff)
+                    buffer.pop()
                     return out
                 else:
                     return r''.join(buff)
             else:
                 if self.__recursive:
                     if local[r'up'] == None:
-                        local[r'stack_buffer'][-1] += buff
+                        top_buff += buff
                     elif local[r'up'] == True:
-                        local[r'stack_buffer'][-2] += buff[:-1]
-                        local[r'stack_buffer'][-1].append(buff[-1])
+                        buffer[-2] += buff[:-1]
+                        top_buff.append(buff[-1])
                     else:
-                        local[r'stack_buffer'][-1][-1] += buff
+                        top_buff[-1] += buff
                 else:
-                    local[r'stack_buffer'][-1] += buff
-
+                    top_buff += buff
                 
             return False
 
@@ -228,36 +234,40 @@ class LLKTokenizer(Grouper):
     def  __iter__(self):
         local = { r'variants': [] }
         def filterGroup(v, buff):
+            variants = local[r'variants']
             # add new buffers
             for val in self.__list:
                 if val.part(v):
-                    local[r'variants'].append(SubToken(val, len(buff) - 1))
+                    variants.append(SubToken(val, len(buff) - 1))
 
             # choose actuals buffers
             new_variants = []
-            for val in local[r'variants']:
+            for val in variants:
                 token = val.token
                 buffer = buff[val.pos:]
 
                 if token.part(buffer):
                     if token.check(buffer):
-                        local[r'variants'] = [val]
+                        variants.clear()
+                        variants.append(val)
                         return False # send buffer
 
                     new_variants.append(val)
 
-            local[r'variants'] = new_variants
+            variants.clear()
+            variants.extend(new_variants)
             return True # skip
         
         def groupBuffer(buff, done):
-            if len(local[r'variants']) <= 0:
+            variants = local[r'variants']
+            if len(variants) <= 0:
                 return Sublist(buff)
 
-            subtoken = local[r'variants'][0]
+            subtoken = variants[0]
             buffer = buff[subtoken.pos:]
             data = buff[0:subtoken.pos]
             data.append(r''.join(buffer))
-            local[r'variants'] = []
+            variants.clear()
             return Sublist(data)
         
         return IteratorEx(self.source).group(filterGroup, groupBuffer)

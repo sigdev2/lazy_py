@@ -125,10 +125,10 @@ class TestLazyTokenizer(unittest.TestCase):
 class TestLazyParser(unittest.TestCase):
     def test_simple_grammar(self):
         grammar = lazy.parser.Grammar(r'''
-:op = +;
-:number = /\d/;
-root = number/\s*/op/\s*/number;
-''')
+            :op = +;
+            :number = /\d/;
+            root = number/\s*/op/\s*/number;
+            ''')
         text = r'1 + 1'
         out = lazy.parser.ParserData()
         self.assertTrue(grammar.check(text, False, out))
@@ -136,6 +136,16 @@ root = number/\s*/op/\s*/number;
         if out.properties[r'op'] == r'+':
             ret = int(out.properties[r'number'][0]) + int(out.properties[r'number'][1])
         self.assertEqual(ret, 2)
+
+    def test_fake_recursive_grammar(self):
+        grammar = lazy.parser.Grammar(r'''
+            space ?= /\s+/;
+            root = /\d/ space , space root;
+            ''')
+        text = lazy.tokenizer.Wordizer(r'1, 2, 3, 4')
+        self.assertFalse(grammar.check(text))
+        text = lazy.tokenizer.Wordizer(r'1 , root')
+        self.assertTrue(grammar.check(text))
 
 if __name__ == r'__main__':
     unittest.main(exit=False)

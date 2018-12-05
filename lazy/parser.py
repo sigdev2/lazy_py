@@ -22,15 +22,18 @@ from .tokenizer import Token, state_tokenizer, LL1TableTokenizer, LL1StateTokeni
 
 class GrammarContext:
     def __init__(self, data, pos = 0):
-        self.it = data if hasattr(data, r'__next__') else iter(data)
+        if hasattr(data, r'__next__'):
+            self.it = data
+        else:
+            self.it = iter(data)
         self.pos = pos
     
     def __copy__(self):
-        copy_it, self.it = itertools.tee(self.it)
-        return GrammarContext(copy_it, self.pos)
+        return GrammarContext(iter(self), self.pos)
 
     def __iter__(self):
-        return self
+        self.it, clone_it = itertools.tee(self.it)
+        return clone_it
     
     def __next__(self):
         return self.next()
@@ -39,7 +42,7 @@ class GrammarContext:
         return next(self.it)
     
     def next_detached(self):
-        next_it, self.it = itertools.tee(self.it)
+        next_it = iter(self)
         try:
             val = next(next_it)
         except StopIteration:
@@ -52,8 +55,13 @@ class ParserData:
         self.properties = {}
         self.is_merged = set()
     
+    def empty(self):
+        return len(self.tokens) + len(self.properties) + len(self.is_merged) == 0
+    
     def simplefy(self):
         val = self
+        if val.empty():
+            return None
         if len(val.properties) <= 0:
             val = val.tokens
             if len(val) == 1:
@@ -85,20 +93,21 @@ class ParserData:
         self.tokens.append((self, key))
     
     def update(self, other):
-        for key in other.properties.keys():
-            first = []
-            if key in self.properties:
-                first = self.get_property(key)
-                if not key in self.is_merged:
-                    first = [first]
-            second = other.get_property(key)
-            if not key in other.is_merged:
-                second = [second]
-            merged = first + second
-            if len(merged) == 1:
-                merged = merged[0]
-            self.properties[key] = merged
-        self.is_merged = self.is_merged | other.is_merged
+        if not other.empty():
+            for key in other.properties.keys():
+                first = []
+                if key in self.properties:
+                    first = self.get_property(key)
+                    if not key in self.is_merged:
+                        first = [first]
+                second = other.get_property(key)
+                if not key in other.is_merged:
+                    second = [second]
+                merged = [x for x in first + second if x != None]
+                if len(merged) == 1:
+                    merged = merged[0]
+                self.properties[key] = merged
+            self.is_merged = self.is_merged | other.is_merged
 
 # LALR(1)
 class GrammarItem(Token):
@@ -258,11 +267,13 @@ class Grammar(GrammarItem):
                         tokens = or_buffer
                 
                 if repeat_token != None: # is repeat
-                    tokens = [GrammarItem(tokens, None, term_type)]
+                    if len(tokens) > 1 or term_type == r'or':
+                        tokens = [GrammarItem(tokens, None, term_type)]
                     term_type = r'repeat'
 
                 if token[0] == r'?=': # is maybe
-                    tokens = [GrammarItem(tokens, None, term_type)]
+                    if len(tokens) > 1 or term_type != r'list':
+                        tokens = [GrammarItem(tokens, None, term_type)]
                     term_type = r'maybe'
 
                 last = GrammarItem(tokens, term_name if to_out else None, term_type, {} if repeat_token == None else {r'delimetr' : repeat_token})

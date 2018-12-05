@@ -56,19 +56,17 @@ class IteratorEx:
         done = True
         buffer = []
         while(True):
-            try:
-                item = next(self.__it)
-                done = False
-            except StopIteration:
-                done = True
-                while self.__it.parent != None:
-                    self.__it = self.__it.parent
-                    try:
-                        item = next(self.__it)
-                        done = False
+            while True:
+                try:
+                    item = next(self.__it)
+                    done = False
+                    break
+                except StopIteration:
+                    done = True
+                    if self.__it.parent != None:
+                        self.__it = self.__it.parent
+                    else:
                         break
-                    except StopIteration:
-                        continue
 
             if done == False:
                 buffer.append(item)
