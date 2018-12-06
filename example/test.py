@@ -144,7 +144,22 @@ class TestLazyParser(unittest.TestCase):
             ''')
         text = lazy.tokenizer.Wordizer(r'1, 2, 3, 4')
         self.assertFalse(grammar.check(text))
-        text = lazy.tokenizer.Wordizer(r'1 , root')
+        text = lazy.tokenizer.Wordizer(r'1, root')
+        self.assertTrue(grammar.check(text))
+    
+    def test_grammar_choose(self):
+        grammar = lazy.parser.Grammar(r'''
+            space ?= /\s+/;
+            music1 = do space re space mi;
+            music2 = do space re space si;
+            music3 = music1 fa;
+            root = music3 | music1 | music2;
+            ''')
+        text = lazy.tokenizer.Wordizer(r'do re si')
+        self.assertTrue(grammar.check(text))
+        text = lazy.tokenizer.Wordizer(r'do re mi')
+        self.assertTrue(grammar.check(text))
+        text = lazy.tokenizer.Wordizer(r'do re mi fa')
         self.assertTrue(grammar.check(text))
 
 if __name__ == r'__main__':

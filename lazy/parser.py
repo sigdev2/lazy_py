@@ -22,34 +22,42 @@ from .tokenizer import Token, state_tokenizer, LL1TableTokenizer, LL1StateTokeni
 
 class GrammarContext:
     def __init__(self, data, pos = 0):
-        if isinstance(data, GrammarContext):
-            self.it = data.it
-        if hasattr(data, r'__next__'):
-            self.it = data
-        else:
-            self.it = iter(data)
+        self.__it = iter(data)
         self.pos = pos
     
     def __copy__(self):
-        return GrammarContext(iter(self), self.pos)
+        return GrammarContext(self.detached(), self.pos)
 
     def __iter__(self):
-        self.it, clone_it = itertools.tee(self.it)
-        return clone_it
+        return self.__it
     
     def __next__(self):
         return self.next()
     
     def next(self):
-        return next(self.it)
+        return next(self.__it)
+    
+    def detached(self):
+        self.__it, copy_it = itertools.tee(self.__it)
+        return copy_it
+    
+    def set_iter(self, it):
+        self.__it = it
+
+    def next_self(self):
+        try:
+            val = next(self.__it)
+        except StopIteration:
+            return None, False
+        return val, True
     
     def next_detached(self):
-        next_it = iter(self)
+        next_it = self.detached()
         try:
             val = next(next_it)
         except StopIteration:
-            return (None, None)
-        return (val, next_it)
+            return None, False
+        return val, True
 
 class ParserData:
     def __init__(self):
@@ -130,29 +138,29 @@ class GrammarItem(Token):
 
     def __token_check(self, ctx, is_part = False, out = ParserData()):
         token = self.tokens[ctx.pos]
+        newctx = ctx.__copy__()
         if isinstance(token, GrammarItem):
-            recCtx = ctx.__copy__()
             child_out = ParserData()
-            if token.check(recCtx, is_part, child_out):
+            if token.check(newctx, is_part, child_out):
                 if is_part:
-                    _, is_end = recCtx.next_detached()
-                    if is_end != None:
+                    _, is_valid = newctx.next_detached()
+                    if is_valid:
                         return False
                 if token.name != None and len(token.name) > 0:
                     out.add_property(token.name, child_out)
                 else:
                     out.update(child_out)
-                ctx.it = recCtx.it
+                ctx.set_iter(iter(newctx))
                 return True
             return False
         else:
-            val, next_it = ctx.next_detached()
-            if next_it == None:
+            val, is_valid = newctx.next_self()
+            if not is_valid:
                 return is_part
             if (hasattr(token, r'check') and token.check(val)) or token == val:
                 if self.name != None and len(self.name) > 0:
                     out.add(val)
-                ctx.it = next_it
+                ctx.next_self()
                 return True
         return False
     
@@ -184,7 +192,7 @@ class GrammarItem(Token):
         return None
 
     def __check(self, data, is_part = False, out = ParserData()):
-        context = data if isinstance(data, GrammarContext) else GrammarContext(data)
+        context = GrammarContext(data)
         l = len(self.tokens)
         while True:
             if context.pos >= l:
