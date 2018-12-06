@@ -184,7 +184,7 @@ class GrammarItem(Token):
         return None
 
     def __check(self, data, is_part = False, out = ParserData()):
-        context = GrammarContext(data)
+        context = data if isinstance(data, GrammarContext) else GrammarContext(data)
         l = len(self.tokens)
         while True:
             if context.pos >= l:
