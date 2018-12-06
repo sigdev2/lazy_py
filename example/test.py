@@ -147,6 +147,17 @@ class TestLazyParser(unittest.TestCase):
         text = lazy.tokenizer.Wordizer(r'1, root')
         self.assertTrue(grammar.check(text))
     
+    def test_recursive_grammar(self):
+        grammar = lazy.parser.Grammar(r'''
+            space ?= /\s+/;
+            list_part = /\d/ space , list;
+            list = list_part
+            ''')
+        text = lazy.tokenizer.Wordizer(r'1, 2, 3, 4')
+        self.assertFalse(grammar.check(text))
+        text = lazy.tokenizer.Wordizer(r'1, root')
+        self.assertTrue(grammar.check(text))
+    
     def test_grammar_choose(self):
         grammar = lazy.parser.Grammar(r'''
             space ?= /\s+/;

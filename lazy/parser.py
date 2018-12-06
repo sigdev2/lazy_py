@@ -121,7 +121,7 @@ class ParserData:
 
 # LALR(1)
 class GrammarItem(Token):
-    def __init__(self, tokens, name=None, item_type = r'list', info = {}, types = [], state = None):
+    def __init__(self, tokens, name=None, item_type = r'list', info = {}, not_terms = {}, types = [], state = None):
         super(GrammarItem, self).__init__(None, types, state)
 
         self.type = r'grammar'
@@ -132,24 +132,26 @@ class GrammarItem(Token):
         self.name = name
         self.item_type = item_type
         self.info = info
+        self.not_terms = not_terms
     
     def __part(self, data):
         return self.__check(data, True)
 
-    def __token_check(self, ctx, is_part = False, out = ParserData()):
+    def __token_check(self, ctx, is_part = False, out = None):
         token = self.tokens[ctx.pos]
         newctx = ctx.__copy__()
         if isinstance(token, GrammarItem):
-            child_out = ParserData()
+            child_out = None if out == None else ParserData()
             if token.check(newctx, is_part, child_out):
                 if is_part:
                     _, is_valid = newctx.next_detached()
                     if is_valid:
                         return False
-                if token.name != None and len(token.name) > 0:
-                    out.add_property(token.name, child_out)
-                else:
-                    out.update(child_out)
+                if out != None:
+                    if token.name != None and len(token.name) > 0:
+                        out.add_property(token.name, child_out)
+                    else:
+                        out.update(child_out)
                 ctx.set_iter(iter(newctx))
                 return True
             return False
@@ -164,7 +166,7 @@ class GrammarItem(Token):
                 return True
         return False
     
-    def __op(self, context, l, is_part, out = ParserData()):
+    def __op(self, context, l, is_part, out = None):
         if self.item_type == r'or':
             if self.__token_check(context, is_part, out):
                 return True
@@ -172,7 +174,7 @@ class GrammarItem(Token):
             if self.__token_check(context, is_part, out):
                 if context.pos + 1 == l:
                     delim, delim_it = context.next_detached()
-                    if delim == self.info[r'delimetr']:
+                    if delim == self.info[r'sep']:
                         context.pos = -1
                         context.it = delim_it
                     else:
@@ -191,7 +193,7 @@ class GrammarItem(Token):
         
         return None
 
-    def __check(self, data, is_part = False, out = ParserData()):
+    def __check(self, data, is_part = False, out = None):
         context = GrammarContext(data)
         l = len(self.tokens)
         while True:
@@ -204,8 +206,8 @@ class GrammarItem(Token):
         return False
 
 class Grammar(GrammarItem):
-    def __init__(self, text):
-        super(Grammar, self).__init__(self.__parse(text), r'root')
+    def __init__(self, grammar):
+        super(Grammar, self).__init__(self.__parse(grammar), r'root', not_terms={ r'root' : self })
     
     def __parse(self, text):
         screened = [Token(r'\/'),
@@ -213,7 +215,8 @@ class Grammar(GrammarItem):
             Token(r'\;'),
             Token(r'\|'),
             Token(r'\{'),
-            Token(r'\}')]
+            Token(r'\}'),
+            Token(r'\=')]
         exclude_tokens = [Token(r'#', [r'start'], [r'comment']),
             Token(r'\n', [r'end'], [r'comment']),
             Token(r'/', [r'start', r'end'], [r'regexp']),
@@ -231,33 +234,33 @@ class Grammar(GrammarItem):
         tokenizer = LL1TableTokenizer(tokenizer, table, True)
 
         buffer = r''
-        last = None
-        terms = {}
+        first = None
+        self.not_terms = {}
         for token in tokenizer:
             if r''.join(token).strip() == r'':
                 continue
             if (token[0] == r'=' or token[0] == r'?=') and token[-1] == r';':
-                term_name = buffer
-                to_out = term_name[0] == r':'
+                not_term = buffer
+                to_out = not_term[0] == r':'
                 if to_out:
-                    term_name = term_name[1:]
+                    not_term = not_term[1:]
                 buffer = r''
-                if term_name.find(r' ') != -1 or term_name in terms:
+                if not_term.find(r' ') != -1 or not_term in self.not_terms:
                     continue
 
-                term_type = r'list'
+                item_type = r'list'
                 tokens = []
                 or_buffer = []
-                repeat_token = None
+                repeat_sep = None
                 for term in LL1StateTokenizer(token[1:-1], repeat_tokens):
                     if term.strip() == r'':
                         continue
                     elif term[0] == r'{' and term[-1] == r'}':
-                        repeat_token = term[1:-1]
+                        repeat_sep = term[1:-1]
                         continue
                     elif term == r'|':
-                        term_type = r'or'
-                        tokens.append(GrammarItem(or_buffer))
+                        item_type = r'or'
+                        tokens.append(GrammarItem(or_buffer, not_terms=self.not_terms))
                         or_buffer = []
                         continue
 
@@ -266,31 +269,33 @@ class Grammar(GrammarItem):
                             term = sch.token[1:]
                             break
 
-                    if term in terms:
-                        or_buffer.append(terms[term])
+                    if term in self.not_terms:
+                        or_buffer.append(self.not_terms[term])
                     else:
                         or_buffer.append(Token(term))
                 if len(or_buffer) > 0:
-                    if term_type == r'or':
-                        tokens.append(GrammarItem(or_buffer))
+                    if item_type == r'or':
+                        tokens.append(GrammarItem(or_buffer, not_terms=self.not_terms))
                     else:
                         tokens = or_buffer
                 
-                if repeat_token != None: # is repeat
-                    if len(tokens) > 1 or term_type == r'or':
-                        tokens = [GrammarItem(tokens, None, term_type)]
-                    term_type = r'repeat'
+                if repeat_sep != None: # is repeat
+                    if len(tokens) > 1 or item_type == r'or':
+                        tokens = [GrammarItem(tokens, None, item_type, not_terms=self.not_terms)]
+                    item_type = r'repeat'
 
                 if token[0] == r'?=': # is maybe
-                    if len(tokens) > 1 or term_type != r'list':
-                        tokens = [GrammarItem(tokens, None, term_type)]
-                    term_type = r'maybe'
+                    if len(tokens) > 1 or item_type != r'list':
+                        tokens = [GrammarItem(tokens, None, item_type, not_terms=self.not_terms)]
+                    item_type = r'maybe'
 
-                last = GrammarItem(tokens, term_name if to_out else None, term_type, {} if repeat_token == None else {r'delimetr' : repeat_token})
-                terms[term_name] = last
+                item = GrammarItem(tokens, not_term if to_out else None, item_type, {} if repeat_sep == None else {r'sep' : repeat_sep}, self.not_terms)
+                self.not_terms[not_term] = item
+                if first == None:
+                    first = item
             else:
                 buffer += r''.join(token)
-        return [] if last == None else [last]
+        return [] if first == None else [first]
 
 if __name__ == r'__main__':
     pass

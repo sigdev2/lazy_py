@@ -15,6 +15,15 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
+# todo
+# Refactoring iterator, tree iterator, GrammarContext
+# Refactoring sublist to return tem falue True or False
+# Refactoring tokenize functions to remove comments, split space tokens, brekets recursion, screened items, regexps
+# itertools functions
+# xrange based on leazy iters
+# cached calculations
+# Optimize memory from freeze attributes for classes
+
 class Command:
     def __init__(self, f):
         self.op = f

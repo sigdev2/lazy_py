@@ -21,13 +21,17 @@ import copy
 from .lazy import IteratorEx, Sublist
 
 class Token:
-    def __init__(self, token, types = [], state = None):
-        try:
-            rx_obj = re._pattern_type
-        except:
-            rx_obj = re.Pattern
-        
+    def __init__(self, token = None, types = [], state = None):
+        self.state = state
+        self.types = set(types)
+        self.set_token(token)
+    
+    def set_token(self, token):
         if token != None:
+            try:
+                rx_obj = re._pattern_type
+            except:
+                rx_obj = re.Pattern
             if callable(token):
                 self.check = token
                 self.part = token
@@ -63,13 +67,10 @@ class Token:
                 self.type = r'str'
                 self.check = lambda v: token == (r''.join(v) if isinstance(v, list) else v)
                 self.part = lambda v: token.startswith(r''.join(v) if isinstance(v, list) else v)
-
-        self.types = set(types)
-        self.state = token if state == None else state
+        if self.state == None:
+            self.state = token
         self.token = token
 
-    def token_type(self):
-        return self.type
     def has(self, typeName):
         return typeName in self.types
     def add(self, typeName):
@@ -220,11 +221,6 @@ class LL1TableTokenizer(Grouper):
 
         return IteratorEx(self.source).group(stateFilter, bufferFunc)
 
-class SubToken:
-    def __init__(self, token, pos):
-        self.pos = pos
-        self.token = token
-
 # LL(k)
 class LLKTokenizer(Grouper):
     def __init__(self, s, l):
@@ -238,13 +234,13 @@ class LLKTokenizer(Grouper):
             # add new buffers
             for val in self.__list:
                 if val.part(v):
-                    variants.append(SubToken(val, len(buff) - 1))
+                    variants.append((val, len(buff) - 1))
 
             # choose actuals buffers
             new_variants = []
             for val in variants:
-                token = val.token
-                buffer = buff[val.pos:]
+                token = val[0]
+                buffer = buff[val[1]:]
 
                 if token.part(buffer):
                     if token.check(buffer):
@@ -263,9 +259,9 @@ class LLKTokenizer(Grouper):
             if len(variants) <= 0:
                 return Sublist(buff)
 
-            subtoken = variants[0]
-            buffer = buff[subtoken.pos:]
-            data = buff[0:subtoken.pos]
+            val = variants[0]
+            buffer = buff[val[1]:]
+            data = buff[0:val[1]]
             data.append(r''.join(buffer))
             variants.clear()
             return Sublist(data)
