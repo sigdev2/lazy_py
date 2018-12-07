@@ -137,16 +137,20 @@ class GrammarItem(Token):
     def __part(self, data):
         return self.__check(data, True)
 
-    def __token_check(self, ctx, is_part = False, out = None):
+    def __token_check(self, ctx, is_part = False, out = None, path = []):
         token = self.tokens[ctx.pos]
+        if len(self.not_terms) > 0:
+            if token.type == r'str' and token.token in self.not_terms:
+                if len(path) > 0:
+                    finded = [item for item in path if item[1] == token.token]
+                    if len(finded) > 0:
+                        if len([item for item in finded if item[0] != 0]) <= 0 and ctx.pos == 0:
+                            return False
+                token = self.not_terms[token.token]
         newctx = ctx.__copy__()
-        if isinstance(token, GrammarItem):
+        if token.type == r'grammar':
             child_out = None if out == None else ParserData()
-            if token.check(newctx, is_part, child_out):
-                if is_part:
-                    _, is_valid = newctx.next_detached()
-                    if is_valid:
-                        return False
+            if token.check(newctx, is_part, child_out, path + [(ctx.pos, token.token)] if token.token != None else path):
                 if out != None:
                     if token.name != None and len(token.name) > 0:
                         out.add_property(token.name, child_out)
@@ -166,12 +170,12 @@ class GrammarItem(Token):
                 return True
         return False
     
-    def __op(self, context, l, is_part, out = None):
+    def __op(self, context, l, is_part, out = None, path = []):
         if self.item_type == r'or':
-            if self.__token_check(context, is_part, out):
+            if self.__token_check(context, is_part, out, path):
                 return True
         elif self.item_type == r'repeat':
-            if self.__token_check(context, is_part, out):
+            if self.__token_check(context, is_part, out, path):
                 if context.pos + 1 == l:
                     delim, delim_it = context.next_detached()
                     if delim == self.info[r'sep']:
@@ -182,10 +186,10 @@ class GrammarItem(Token):
             else:
                 return False
         elif self.item_type == r'maybe':
-            self.__token_check(context, is_part, out)
+            self.__token_check(context, is_part, out, path)
             return True
         else: # self.item_type == r'list'
-            if self.__token_check(context, is_part, out):
+            if self.__token_check(context, is_part, out, path):
                 if context.pos + 1 == l:
                     return True
             else:
@@ -193,13 +197,13 @@ class GrammarItem(Token):
         
         return None
 
-    def __check(self, data, is_part = False, out = None):
+    def __check(self, data, is_part = False, out = None, path = []):
         context = GrammarContext(data)
         l = len(self.tokens)
         while True:
             if context.pos >= l:
                 break
-            ret = self.__op(context, l, is_part, out)
+            ret = self.__op(context, l, is_part, out, path)
             if ret != None:
                return ret
             context.pos += 1
@@ -207,7 +211,7 @@ class GrammarItem(Token):
 
 class Grammar(GrammarItem):
     def __init__(self, grammar):
-        super(Grammar, self).__init__(self.__parse(grammar), r'root', not_terms={ r'root' : self })
+        super(Grammar, self).__init__(self.__parse(grammar), r'__root__', not_terms={ r'__root__' : self })
     
     def __parse(self, text):
         screened = [Token(r'\/'),
@@ -269,10 +273,7 @@ class Grammar(GrammarItem):
                             term = sch.token[1:]
                             break
 
-                    if term in self.not_terms:
-                        or_buffer.append(self.not_terms[term])
-                    else:
-                        or_buffer.append(Token(term))
+                    or_buffer.append(Token(term))
                 if len(or_buffer) > 0:
                     if item_type == r'or':
                         tokens.append(GrammarItem(or_buffer, not_terms=self.not_terms))
@@ -290,6 +291,7 @@ class Grammar(GrammarItem):
                     item_type = r'maybe'
 
                 item = GrammarItem(tokens, not_term if to_out else None, item_type, {} if repeat_sep == None else {r'sep' : repeat_sep}, self.not_terms)
+                item.token = not_term
                 self.not_terms[not_term] = item
                 if first == None:
                     first = item
