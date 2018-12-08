@@ -119,6 +119,22 @@ class ParserData:
                 self.properties[key] = merged
             self.is_merged = self.is_merged | other.is_merged
 
+class GrammarException(Exception):
+    r"""Grammar exceptions base class"""
+    pass
+
+class WrongTokenException(GrammarException):
+    r"""Wrong token"""
+    pass
+
+class LeftSideRecursionException(GrammarException):
+    r"""Left sie infinity recursion"""
+    pass
+
+class EndOfInputException(GrammarException):
+    r"""Input end before grammar"""
+    pass
+
 # LALR(1)
 class GrammarItem(Token):
     def __init__(self, tokens, name=None, item_type = r'list', info = {}, not_terms = {}, types = [], state = None):
@@ -145,7 +161,7 @@ class GrammarItem(Token):
                     finded = [item for item in path if item[1] == token.token]
                     if len(finded) > 0:
                         if len([item for item in finded if item[0] != 0]) <= 0 and ctx.pos == 0:
-                            return False
+                            raise LeftSideRecursionException()
                 token = self.not_terms[token.token]
         newctx = ctx.__copy__()
         if token.type == r'grammar':
@@ -157,44 +173,39 @@ class GrammarItem(Token):
                     else:
                         out.update(child_out)
                 ctx.set_iter(iter(newctx))
-                return True
-            return False
+            raise WrongTokenException()
         else:
             val, is_valid = newctx.next_self()
             if not is_valid:
-                return is_part
+                raise EndOfInputException()
             if (hasattr(token, r'check') and token.check(val)) or token == val:
                 if self.name != None and len(self.name) > 0:
                     out.add(val)
                 ctx.next_self()
-                return True
-        return False
+        raise WrongTokenException()
     
     def __op(self, context, l, is_part, out = None, path = []):
-        if self.item_type == r'or':
-            if self.__token_check(context, is_part, out, path):
+        try:
+            self.__token_check(context, is_part, out, path)
+        except WrongTokenException:
+            if self.item_type == r'or':
+                return None
+            elif self.item_type == r'maybe':
                 return True
-        elif self.item_type == r'repeat':
-            if self.__token_check(context, is_part, out, path):
-                if context.pos + 1 == l:
-                    delim, delim_it = context.next_detached()
+            else: # self.item_type == r'list' or self.item_type == r'repeat'
+                return False
+
+        if self.item_type == r'or' or self.item_type == r'maybe':
+            return True
+        else: # self.item_type == r'list' or self.item_type == r'repeat'
+            if context.pos + 1 == l:
+                if self.item_type == r'repeat':
+                    delim, _ = context.next_detached()
                     if delim == self.info[r'sep']:
                         context.pos = -1
-                        context.it = delim_it
-                    else:
-                        return True
-            else:
-                return False
-        elif self.item_type == r'maybe':
-            self.__token_check(context, is_part, out, path)
-            return True
-        else: # self.item_type == r'list'
-            if self.__token_check(context, is_part, out, path):
-                if context.pos + 1 == l:
-                    return True
-            else:
-                return False
-        
+                        context.next_self()
+                        return None
+                return True
         return None
 
     def __check(self, data, is_part = False, out = None, path = []):
