@@ -23,6 +23,7 @@ r''' Copyright 2018, SigDev
 # xrange based on leazy iters
 # cached calculations
 # Optimize memory from freeze attributes for classes
+# paralel calculatons for variatic tokenizrer and chooses in grammar
 
 class Command:
     def __init__(self, f):
