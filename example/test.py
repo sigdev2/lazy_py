@@ -131,7 +131,7 @@ class TestLazyParser(unittest.TestCase):
             ''')
         text = r'1 + 1'
         out = lazy.parser.ParserData()
-        self.assertTrue(grammar.check(text, False, out))
+        self.assertTrue(grammar.check(text, out))
         ret = -1
         if out.properties[r'op'] == r'+':
             ret = int(out.properties[r'number'][0]) + int(out.properties[r'number'][1])
@@ -149,19 +149,21 @@ class TestLazyParser(unittest.TestCase):
     def test_stop_infinity_recursion_grammar(self):
         grammar = lazy.parser.Grammar(r'''
             grammar_name = next_list /\d/;
+            # infinity left recursion
             next_list ?= grammar_name space;
             space ?= /\s+/;
             ''')
         text = lazy.tokenizer.Wordizer(r'1 2 3 4')
-        self.assertTrue(grammar.check(text))
+        self.assertFalse(grammar.check(text))
 
     def test_grammar_choose(self):
         grammar = lazy.parser.Grammar(r'''
+            grammar_name = music3 | music1 | music2;
             space ?= /\s+/;
+            # test comment
             music1 = do space re space mi;
             music2 = do space re space si;
             music3 = music1 fa;
-            grammar_name = music3 | music1 | music2;
             ''')
         text = lazy.tokenizer.Wordizer(r'do re si')
         self.assertTrue(grammar.check(text))

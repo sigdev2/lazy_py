@@ -191,8 +191,9 @@ class LL1TableTokenizer(Grouper):
         def bufferFunc(buff, done):
             if len(buff) == 0:
                 return False
-
             buffer = local[r'stack_buffer']
+            if len(buffer) == 0:
+                return False
             top_buff = buffer[-1]
             if local[r'stack'][-1] == r'none':
                 if len(buffer) > 0 and len(top_buff) > 0:
@@ -256,7 +257,7 @@ class LLKTokenizer(Grouper):
         
         def groupBuffer(buff, done):
             variants = local[r'variants']
-            if len(variants) <= 0:
+            if len(variants) == 0:
                 return Sublist(buff)
 
             val = variants[0]
