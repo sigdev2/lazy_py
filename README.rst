@@ -7,9 +7,10 @@ Main part of module is class IteratorEx
 ______________________________
 
 Relised base commands to work with list of items:
- - filter - for filter iterable object items
  - map - for map iterable object items
- - group - for join items by many states to one in items sequance
+ - filter - for filter iterable object items
+ - remove - ignore items of iterable object
+ - groupby - for join items by many states in items sequance
 
 Example
 _______
