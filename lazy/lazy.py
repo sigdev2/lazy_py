@@ -177,7 +177,7 @@ class Iterator:
         def removeLambda(val, done, buffer, it):
             if isinstance(value, list):
                 return val, val not in value
-            return val != value
+            return val, val != value
         self.__commands.append(Command(removeLambda))
         return self
 

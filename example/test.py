@@ -32,6 +32,14 @@ class TestLazyIterator(unittest.TestCase):
             out += ch
         self.assertEqual(out, r'wnonrndn1n,nwnonrndn2n,nwnonrndn3n')
 
+    def test_map_ex(self):
+        iterable_object = r'string iterate by symbol'
+        out = r''
+        for ch in lazy.Iterator(iterable_object).map(
+          lambda x: r'b' if x == r's' else x):
+            out += ch
+        self.assertEqual(out, r'btring iterate by bymbol')
+
     def test_filter(self):
         text = r'word1,word2,word3'
         out = r''
@@ -39,12 +47,36 @@ class TestLazyIterator(unittest.TestCase):
             out += ch
         self.assertEqual(out, r'wrd1,wrd2,wrd3')
 
+    def test_filter_ex(self):
+        iterable_object = r'string iterate by symbol'
+        out = r''
+        for ch in lazy.Iterator(iterable_object).filter(lambda x: x != r' '):
+            out += ch
+        self.assertEqual(out, r'stringiteratebysymbol')
+
     def test_remove(self):
         text = r'word1,word2,word3'
         out = r''
         for ch in lazy.Iterator(text).remove([r'o', r'd']):
             out += ch
         self.assertEqual(out, r'wr1,wr2,wr3')
+
+    def test_remove_ex(self):
+        iterable_object = r'string iterate by symbol'
+        out = r''
+        for ch in lazy.Iterator(iterable_object).remove(r' ').remove(
+          [r'i', r'o', r'a', r'e', r'y']):
+            out += ch
+        self.assertEqual(out, r'strngtrtbsmbl')
+
+    def test_group_ex(self):
+        iterable_object = r'string iterate by symbol'
+        out = []
+        for ch in lazy.Iterator(iterable_object).groupby(
+          lambda x, b, s: r'space' if x == r' ' else r'word', False):
+            out.append(r''.join(ch))
+        self.assertEqual(out, [r'string', r' ', r'iterate',
+                               r' ', r'by', r' ', r'symbol'])
 
     def test_group(self):
         text = r'word1word2word3'
