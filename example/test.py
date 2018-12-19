@@ -49,12 +49,111 @@ class TestLazyIterator(unittest.TestCase):
     def test_group(self):
         text = r'word1word2word3'
         out = []
-        for ch in lazy.Iterator(text).groupby(lambda x, b: not x.isdigit()):
+        for ch in lazy.Iterator(text).groupby(lambda x, b, s: not x.isdigit()):
             if isinstance(ch, list):
                 out.append(r''.join(ch))
             else:
                 out.append(ch)
         self.assertEqual(out, [r'word', r'1', r'word', r'2', r'word', r'3'])
+
+    def test_liner_group(self):
+        text = r'a{[()][(][)]}b'
+        out = []
+
+        def states(ch, b, s):
+            if ch == r'(' or ch == r')':
+                return r'c_bracket'
+            if ch == r'{' or ch == r'}':
+                return r's_bracket'
+            if ch == r'[' or ch == r']':
+                return r'k_bracket'
+            return None
+
+        for ch in lazy.Iterator(text).groupby(states, recursive=False):
+            out.append(ch)
+        self.assertEqual(out, [r'a',
+                               [r'{'],
+                               [r'['],
+                               [r'(', r')'],
+                               [r']', r'['],
+                               [r'('],
+                               [r']', r'['],
+                               [r')'],
+                               [r']'],
+                               [r'}'],
+                               r'b'])
+
+    def test_liner_group_swither_include(self):
+        text = '"string1"\'string2\''
+        text += '"string3\'quoted""string4\'quoted"'
+        text += '\'string3"quoted\'\'string4"quoted\''
+        out = []
+
+        def states(ch, b, s):
+            if (ch == '\'' or ch == r'"') and s is None:
+                return ch
+            if ch == s:
+                return None
+            return s
+
+        for ch in lazy.Iterator(text).groupby(states, False, True):
+            out.append(r''.join(ch))
+        self.assertEqual(out, [r'"string1"', '\'string2\'',
+                               '"string3\'quoted"', '"string4\'quoted"',
+                               '\'string3"quoted\'', '\'string4"quoted\''])
+
+    def test_recursive_group(self):
+        text = r'a{[()][(][)]}[]b'
+        out = []
+
+        def states(ch, b, s):
+            if ch == r'(' or ch == r')':
+                return r'c_bracket'
+            if ch == r'{' or ch == r'}':
+                return r's_bracket'
+            if ch == r'[' or ch == r']':
+                return r'k_bracket'
+            return None
+
+        for ch in lazy.Iterator(text).groupby(states):
+            out.append(ch)
+        self.assertEqual(out, [r'a',
+                               [r'{',
+                                [r'[', [r'(', r')'], r']',
+                                 r'[', [r'('], r']',
+                                 r'[', [r')'], r']'],
+                                r'}',
+                                [r'[', r']']],
+                               r'b'])
+
+    def test_recursive_group_swither_include(self):
+        text = r'a{[()][(][)]}{}b'
+        out = []
+
+        def states(ch, b, s):
+            if ch == r'(' and s == r'down2':
+                return r'down3'
+            if ch == r')' and s == r'down3':
+                return r'down2'
+            if ch == r'[' and s == r'down1':
+                return r'down2'
+            if ch == r']' and s == r'down2':
+                return r'down1'
+            if ch == r'{' and s is None:
+                return r'down1'
+            if ch == r'}' and s == r'down1':
+                return None
+            return s
+
+        for ch in lazy.Iterator(text).groupby(states, swither_inc=True):
+            out.append(ch)
+        self.assertEqual(out, [r'a',
+                               [r'{',
+                                [r'[', [r'(', r')'], r']'],
+                                [r'[', [r'(', r']', r'[', r')'], r']'],
+                                r'}'],
+                               [r'{', r'}'],
+                               r'b'])
 
 
 r"""class TestLazyTokenizer(unittest.TestCase):

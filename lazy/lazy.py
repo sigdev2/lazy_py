@@ -30,12 +30,18 @@ from six.moves import xrange
 # paralel calculatons for variatic tokenizrer and chooses in grammar
 # read docs documentation
 # speed tests
+# lazy iterator for buffering - return not calculated buffer when scan or
+#     group element, and calculate buffer len only when get next element
+# use Coverage for tests
+# use Tox for test compatibility
+# perfomance compare with iterator tools
 
 
 class Command:
     def __init__(self, f, done_exit=True):
         if done_exit:
-            self.op = lambda val, done, buffer, it: ((None, None) if done else f(val, done, buffer, it))
+            self.op = lambda val, done, buffer, it: \
+                ((None, None) if done else f(val, done, buffer, it))
         else:
             self.op = f
 
@@ -62,6 +68,11 @@ class TreePtr(Ptr):
     def __init__(self, obj, parent=None):
         super(TreePtr, self).__init__(obj)
         self.parent = parent
+
+    def clear(self, obj=None, parent=None):
+        self.value = obj
+        self.parent = parent
+        return self.value
 
 
 class Iterator:
@@ -93,6 +104,7 @@ class Iterator:
                     if self.__it.parent is not None:
                         self.__it = self.__it.parent
                     else:
+                        item = None
                         break
 
             if not done:
@@ -107,18 +119,19 @@ class Iterator:
 
                     if i >= len(self.__commands):
                         break
-                    val, status = self.__commands[i].op(item, done, buffer, self)
-
-                    if not status or status == r's':  # skip
-                        is_skip = True
-                    elif status or status == r'n':  # don't change
+                    val, stat = self.__commands[i].op(item, done, buffer, self)
+                    if not done:
+                        if stat is False or stat == r's':  # skip
+                            is_skip = True
+                            break
+                        elif stat == r'r':  # repeat
+                            continue
+                    if stat is True or stat == r'n':  # don't change
                         pass
-                    elif status == r'r':  # repeat
-                        continue
-                    elif status is None or status == r'd':  # done
+                    elif stat is None or stat == r'd':  # done
                         raise StopIteration
-                    elif status == list or status == r'l':  # list
-                        if len(buffer) > 0:
+                    elif stat == list or stat == r'l':  # list
+                        if not done and len(buffer) > 0:
                             buffer.pop()
                         it = IteratorsTree(iter(val))
                         it.i = i + 1
@@ -128,7 +141,7 @@ class Iterator:
                         is_skip = True
                     else:  # value
                         item = val
-                        if len(buffer) == 0:  # done == True is new item
+                        if done or len(buffer) == 0:
                             buffer.append(item)
                         else:
                             buffer[-1] = item
@@ -162,57 +175,86 @@ class Iterator:
 
     def remove(self, value):
         def removeLambda(val, done, buffer, it):
-            return val, val not in value if isinstance(value, list) else val != value
+            if isinstance(value, list):
+                return val, val not in value
+            return val != value
         self.__commands.append(Command(removeLambda))
         return self
 
-    def groupby(self, f=lambda v, b: v):
+    def groupby(self, f=lambda v, b, s: v, recursive=True, swither_inc=False):
         d = []
-        nl = {r's': [None], r'd': d, r'c': TreePtr(d)}
+        nl = {r's': [None], r'd': d, r'c': TreePtr(d),
+              r'i': swither_inc, r'r': recursive}
 
         def groupLambda(val, done, buf, it):
             newstate = None
+            rec = nl[r'r']
+            st = nl[r's']
+            si = nl[r'i']
+            root = nl[r'd']
+            cur = nl[r'c']
+            last = st[-1]
             if done:
                 if len(buf) == 0:
+                    if len(root) > 0:
+                        del st[1:]
+                        ret = root
+                        nl[r'd'] = cur.clear([])
+                        return ret, list
                     return None, None
             else:
-                newstate = f(val, buf)
+                newstate = f(val, buf, last)
             buflen = len(buf)
 
-            last = nl[r's'][-1]
-            if not newstate:
+            if newstate is False:
                 newstate = None
-            if last == newstate:
-                return val, newstate is not None
-            if newstate is not None:
-                del nl[r's'][:]
-                nl[r's'].append(None)
-                for _ in xrange(buflen - 1):
-                    nl[r'c'].value.append(buf.pop(0))
-                if done:
-                    nl[r'c'].value.append(buf.pop(0))
-                ret = nl[r'd']
-                nl[r'd'] = []
-                nl[r'c'].value = nl[r'd']
-                nl[r'c'].parent = None
-                return [ret] + buf, list
-            else:
-                if len(nl[r's']) > 1 and nl[r's'][-2] == newstate:
-                    nl[r's'].pop()
-                    nl[r'c'] = nl[r'c'].parent
-                else:
-                    nl[r's'].append(newstate)
-                    nl[r'd'] = []
-                    nl[r'c'].value.append(nl[r'd'])
-                    nl[r'c'] = TreePtr(nl[r'd'], nl[r'c'])
-
-            for _ in xrange(buflen):
-                nl[r'c'].value.append(buf.pop(0))
-
-            if nl[r's'][-1] is not None:
+            if newstate == NotImplemented:
+                newstate = st[-2] if last is not None else None
+            if last == newstate:  # state not changed
+                if newstate is None:
+                    return buf.pop(), NotImplemented
                 return None, False  # skip
+            # change state
+            for _ in xrange(buflen - 1):
+                cur.value.append(buf.pop(0))
+            if newstate is None:  # state -> None
+                if done or si:
+                    cur.value.append(buf.pop())
+                del st[1:]
+                ret = root
+                nl[r'd'] = cur.clear([])
+                if len(buf) > 0:
+                    ret.append(buf.pop())
+                return ret, list
+            else:  # state -> state or  # None -> state
+                mode = rec  # liner
+                if rec:
+                    if last is not None and st[-2] == newstate:  # up
+                        st.pop()
+                    else:  # down
+                        st.append(newstate)
+                        mode = None
+                else:  # liner
+                    if last is None:
+                        st.append(newstate)
+                    else:
+                        st[-1] = newstate
 
-            return nl[r'd'], NotImplemented
+                si = si and mode
+                if si:
+                    cur.value.append(val)
+                if mode:  # up
+                    nl[r'c'] = cur.parent
+                else:  # down or liner
+                    if mode is None or last is None:
+                        nl[r'c'] = TreePtr([], cur)
+                    else:
+                        nl[r'c'] = TreePtr([], cur.parent)
+                    nl[r'c'].parent.value.append(nl[r'c'].value)
+                if not si:
+                    nl[r'c'].value.append(val)
+            buf.pop()
+            return None, False  # skip
 
         self.__commands.append(Command(groupLambda, False))
         return self
