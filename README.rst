@@ -37,7 +37,7 @@ Use methods:
         out += ch
     print out  # r'btring iterate by bymbol'
 
-
+::
  - filter:
 .. code:: python
 
@@ -48,7 +48,7 @@ Use methods:
         out += ch
     print out  # r'stringiteratebysymbol'
 
-
+::
  - remove:
 .. code:: python
 
@@ -60,7 +60,7 @@ Use methods:
         out += ch
     print out  # r'strngtrtbsmbl'
 
-
+::
  - groupby:
 .. code:: python
 
