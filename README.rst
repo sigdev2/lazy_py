@@ -26,47 +26,49 @@ Base use:
         print ch
 
 Use methods:
-    - map:
+ - map:
 
-.. code:: python
+   .. code:: python
 
-    import lazy
-    iterable_object = r'string iterate by symbol'
-    out = r''
-    for ch in lazy.Iterator(iterable_object).map(
-      lambda x: r'b' if x == r's' else x):
-        out += ch
-    print out  # r'btring iterate by bymbol'
+        import lazy
+        iterable_object = r'string iterate by symbol'
+        out = r''
+        for ch in lazy.Iterator(iterable_object).map(
+          lambda x: r'b' if x == r's' else x):
+            out += ch
+        print out  # r'btring iterate by bymbol'
 
-    - filter:
+ - filter:
 
-.. code:: python
+    .. code:: python
 
-    import lazy
-    iterable_object = r'string iterate by symbol'
-    out = r''
-    for ch in lazy.Iterator(iterable_object).filter(lambda x: x != r' '):
-        out += ch
-    print out  # r'stringiteratebysymbol'
+        import lazy
+        iterable_object = r'string iterate by symbol'
+        out = r''
+        for ch in lazy.Iterator(iterable_object).filter(lambda x: x != r' '):
+            out += ch
+        print out  # r'stringiteratebysymbol'
 
- remove:
-.. code:: python
+ - remove:
 
-    import lazy
-    iterable_object = r'string iterate by symbol'
-    out = r''
-    for ch in lazy.Iterator(iterable_object).remove(r' ').remove(
-      [r'i', r'o', r'a', r'e', r'y']):
-        out += ch
-    print out  # r'strngtrtbsmbl'
+    .. code:: python
 
- groupby:
-.. code:: python
+        import lazy
+        iterable_object = r'string iterate by symbol'
+        out = r''
+        for ch in lazy.Iterator(iterable_object).remove(r' ').remove(
+          [r'i', r'o', r'a', r'e', r'y']):
+            out += ch
+        print out  # r'strngtrtbsmbl'
 
-    import lazy
-    iterable_object = r'string iterate by symbol'
-    out = []
-    for ch in lazy.Iterator(iterable_object).groupby(
-      lambda x, b, s: r'space' if x == r' ' else r'word', False):
-        out.append(r''.join(ch))
-    print out  # [r'string', r' ', r'iterate', r' ', r'by', r' ', r'symbol']
+ - groupby:
+
+    .. code:: python
+
+        import lazy
+        iterable_object = r'string iterate by symbol'
+        out = []
+        for ch in lazy.Iterator(iterable_object).groupby(
+          lambda x, b, s: r'space' if x == r' ' else r'word', False):
+            out.append(r''.join(ch))
+        print out  # [r'string', r' ', r'iterate', r' ', r'by', r' ', r'symbol']
