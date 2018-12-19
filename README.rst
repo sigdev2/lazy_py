@@ -37,6 +37,7 @@ Use methods:
         out += ch
     print out  # r'btring iterate by bymbol'
 
+
  - filter:
 .. code:: python
 
@@ -46,6 +47,7 @@ Use methods:
     for ch in lazy.Iterator(iterable_object).filter(lambda x: x != r' '):
         out += ch
     print out  # r'stringiteratebysymbol'
+
 
  - remove:
 .. code:: python
@@ -57,6 +59,7 @@ Use methods:
       [r'i', r'o', r'a', r'e', r'y']):
         out += ch
     print out  # r'strngtrtbsmbl'
+
 
  - groupby:
 .. code:: python
