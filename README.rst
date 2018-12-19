@@ -37,6 +37,9 @@ Use methods:
         out += ch
     print out  # r'btring iterate by bymbol'
 
+:
+
+::
 
 
 
