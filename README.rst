@@ -28,15 +28,15 @@ Base use:
 Use methods:
  - map:
 
-   .. code:: python
+    .. code:: python
 
-        import lazy
-        iterable_object = r'string iterate by symbol'
-        out = r''
-        for ch in lazy.Iterator(iterable_object).map(
-          lambda x: r'b' if x == r's' else x):
-            out += ch
-        print out  # r'btring iterate by bymbol'
+         import lazy
+         iterable_object = r'string iterate by symbol'
+         out = r''
+         for ch in lazy.Iterator(iterable_object).map(
+           lambda x: r'b' if x == r's' else x):
+             out += ch
+         print out  # r'btring iterate by bymbol'
 
  - filter:
 
