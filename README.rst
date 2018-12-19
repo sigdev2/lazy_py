@@ -20,30 +20,50 @@ Base use:
 
     import lazy
 
-    text = r'''_tes/*t t'*/ext /*h'g/*'jgh*//*sdfsf*/ /*spec sdfss*/gdfgdfg spec*/ { sdfsdf {sdfsd} jhghg }{ sdfsdf {sdfsd} jhghg }somefunc(sdfs(dfsd(f))'sdfsdf)') j' kjhkj /* hlkjlkj 'hk*/jh'''
-    
-    lo = lazy.IteratorEx(text)
+    iterable_object = r'string iterate by symbol'
+    for ch in lazy.Iterator(iterable_object):
+        print ch
 
 Use methods:
-
+ - map:
 .. code:: python
 
-    lo.map(lambda x : x + ' ')
+    import lazy
+    iterable_object = r'string iterate by symbol'
+    out = r''
+    for ch in lazy.Iterator(iterable_object).map(
+      lambda x: r'b' if x == r's' else x):
+        out += ch
+    print out  # r'btring iterate by bymbol'
 
+ - filter:
 .. code:: python
 
-    lo.filter(lambda x : False)
+    import lazy
+    iterable_object = r'string iterate by symbol'
+    out = r''
+    for ch in lazy.Iterator(iterable_object).filter(lambda x: x != r' '):
+        out += ch
+    print out  # r'stringiteratebysymbol'
 
+ - remove:
 .. code:: python
-    
-    def bufferize(buff, done):
-        if len(buff) == 0:
-            return False
-        if len(buff) == 1:
-            return buff[0]
-        if done:
-            return r''.join(buff)
-        last = buff.pop(-1)
-        return lazy.Sublist([r''.join(buff), last])
- 
-    lo.group(lambda v, b : '\'";:.,></?|\\=-+)({}[]*&^%$#@!`~\t\n\r '.find(v) <= -1, bufferize)
+
+    import lazy
+    iterable_object = r'string iterate by symbol'
+    out = r''
+    for ch in lazy.Iterator(iterable_object).remove(r' ').remove(
+      [r'i', r'o', r'a', r'e', r'y']):
+        out += ch
+    print out  # r'strngtrtbsmbl'
+
+ - groupby:
+.. code:: python
+
+    import lazy
+    iterable_object = r'string iterate by symbol'
+    out = []
+    for ch in lazy.Iterator(iterable_object).groupby(
+      lambda x, b, s: r'space' if x == r' ' else r'word', False):
+        out.append(r''.join(ch))
+    print out  # [r'string', r' ', r'iterate', r' ', r'by', r' ', r'symbol']
