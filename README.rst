@@ -3,7 +3,7 @@ Lazy calculations for Python
 
 This Python module realize part of lazy calculations in functional programing paradigm, based on iterators.
 
-Main part of module is class IteratorEx
+Main part of module is class Iterator
 ______________________________
 
 Relised base commands to work with list of items:
