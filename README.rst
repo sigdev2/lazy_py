@@ -26,7 +26,7 @@ Base use:
         print ch
 
 Use methods:
- - map:
+ map:
 .. code:: python
 
     import lazy
@@ -38,7 +38,7 @@ Use methods:
     print out  # r'btring iterate by bymbol'
     ::
 
- - filter:
+ filter:
 .. code:: python
 
     import lazy
@@ -48,8 +48,7 @@ Use methods:
         out += ch
     print out  # r'stringiteratebysymbol'
 
-::
- - remove:
+ remove:
 .. code:: python
 
     import lazy
@@ -60,8 +59,7 @@ Use methods:
         out += ch
     print out  # r'strngtrtbsmbl'
 
-::
- - groupby:
+ groupby:
 .. code:: python
 
     import lazy
