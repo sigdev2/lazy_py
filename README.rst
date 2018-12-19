@@ -36,7 +36,9 @@ Use methods:
       lambda x: r'b' if x == r's' else x):
         out += ch
     print out  # r'btring iterate by bymbol'
-    ::
+
+
+
 
  filter:
 .. code:: python
