@@ -40,7 +40,7 @@ Use methods:
 
 
 
- filter:
+ :filter:
 .. code:: python
 
     import lazy
