@@ -28,7 +28,6 @@ Base use:
 Use methods:
  - map:
 .. code:: python
-
     import lazy
     iterable_object = r'string iterate by symbol'
     out = r''
@@ -36,8 +35,8 @@ Use methods:
       lambda x: r'b' if x == r's' else x):
         out += ch
     print out  # r'btring iterate by bymbol'
-
 ::
+
  - filter:
 .. code:: python
 
