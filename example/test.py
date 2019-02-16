@@ -24,41 +24,8 @@ sys.path.insert(0, realpath(dirname(realpath(__file__)) + r'/..'))
 import lazy
 
 
-"""class TestCahche(unittest.TestCase):
-    def test_cahce(self):
-        val1 = [1, 2, 3, 4]
-        val2 = 1234
-        val3 = "1234"
-        val4 = {r'1': 1, r'4': 4, r'3': 3, r'2': 2}
-
-        @lazy.cached()
-        def func1():
-            return val1
-
-        @lazy.cached()
-        def func2():
-            return val2
-
-        @lazy.cached()
-        def func3():
-            return val3
-
-        @lazy.cached()
-        def func4():
-            return val4
-
-        self.assertEqual(func1(), val1)
-        self.assertEqual(func1(), val1)
-        self.assertEqual(func2(), val2)
-        self.assertEqual(func2(), val2)
-        self.assertEqual(func3(), val3)
-        self.assertEqual(func3(), val3)
-        self.assertEqual(func4(), val4)
-        self.assertEqual(func4(), val4)"""
-
-
 class TestLazyIterator(unittest.TestCase):
-    """def test_map(self):
+    def test_map(self):
         text = r'word1,word2,word3'
         out = r''
         for ch in lazy.Iterator(text).map(lambda x: x + r'n'):
@@ -107,7 +74,7 @@ class TestLazyIterator(unittest.TestCase):
         it1 = lazy.Iterator(text)
         next(it1)
         it2 = it1.copy()
-        self.assertEqual(next(it1), next(it2))"""
+        self.assertEqual(next(it1), next(it2))
 
     def test_group_ex(self):
         iterable_object = r'string iterate by symbol'
@@ -118,7 +85,7 @@ class TestLazyIterator(unittest.TestCase):
         self.assertEqual(out, [r'string', r' ', r'iterate',
                                r' ', r'by', r' ', r'symbol'])
 
-    """def test_group(self):
+    def test_group(self):
         text = r'word1word2word3'
         out = []
         for ch in lazy.Iterator(text).groupby(lambda x, b, s: not x.isdigit()):
@@ -225,8 +192,40 @@ class TestLazyIterator(unittest.TestCase):
                                 [r'[', [r'(', r']', r'[', r')'], r']'],
                                 r'}'],
                                [r'{', r'}'],
-                               r'b'])"""
+                               r'b'])
 
+
+class TestCahche(unittest.TestCase):
+    def test_cahce(self):
+        val1 = [1, 2, 3, 4]
+        val2 = 1234
+        val3 = "1234"
+        val4 = {r'1': 1, r'4': 4, r'3': 3, r'2': 2}
+
+        @lazy.cached()
+        def func1():
+            return val1
+
+        @lazy.cached()
+        def func2():
+            return val2
+
+        @lazy.cached()
+        def func3():
+            return val3
+
+        @lazy.cached()
+        def func4():
+            return val4
+
+        self.assertEqual(func1(), val1)
+        self.assertEqual(func1(), val1)
+        self.assertEqual(func2(), val2)
+        self.assertEqual(func2(), val2)
+        self.assertEqual(func3(), val3)
+        self.assertEqual(func3(), val3)
+        self.assertEqual(func4(), val4)
+        self.assertEqual(func4(), val4)
 
 """class TestLazyTokenizer(unittest.TestCase):
     def test_wordize(self):

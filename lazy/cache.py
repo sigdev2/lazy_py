@@ -73,7 +73,6 @@ def cached(items=128, btmin=304, btmax=3072, add_to_hash=None):
 
         def inline(*args, **kwargs):
             key = hashkey(add_to_hash, *args, **kwargs)
-            print(str(add_to_hash) + str(args) + str(kwargs) + str(key))
             cl = len(cache)
             if cl > 1 and key in cache:
                 val = cache[key]
@@ -81,9 +80,9 @@ def cached(items=128, btmin=304, btmax=3072, add_to_hash=None):
                 return val[0]
 
             ret = f(*args, **kwargs)
-            '''size = get_size_rec(ret)
-            if size <= btmin or size > btmax:
-                return ret'''
+            size = get_size_rec(ret)
+            if size < btmin or size > btmax:
+                return ret
 
             if cl > items:
                 minKey = None
