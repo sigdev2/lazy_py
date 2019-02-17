@@ -15,6 +15,7 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
+from six import callable as six_callable
 from six.moves import xrange, reduce
 try:
     from collections.abc import Iterable
@@ -81,7 +82,7 @@ class Iterator:
                  r'__current', r'__idx',
                  r'__memo_hash']
 
-    def __init__(self, obj, parent=None):
+    def __init__(self, obj=None, parent=None):
         if isinstance(obj, Iterable) or \
            hasattr(obj, r'__iter__ '):
             self.__obj = obj
@@ -103,10 +104,16 @@ class Iterator:
 
         # reset()
         self.__command = None
-        self.__it = iter(self.__obj)
+        if isinstance(self.__obj, Iterator):
+            self.__it = self.__obj.clone()
+            self.__it.reset()
+        else:
+            self.__it = iter(self.__obj)
         self.__current = None
         self.__idx = -1
         self.__memo_hash = None
+
+    # magics
 
     def __iter__(self):
         return self
@@ -201,18 +208,19 @@ class Iterator:
 
                     if i >= len(self.__commands):
                         break
-                    val, stat = self.__commands[i].op(item, done, buffer, self)
+                    val, s = self.__commands[i].op(item, done, buffer, self)
                     if not done:
-                        if stat is False or stat == r's':  # skip
+                        if s is False or s == r's':  # skip
                             is_skip = True
                             break
-                        elif stat == r'r':  # repeat
+                        elif s == r'r':  # repeat
                             continue
-                    if stat is True or stat == r'n':  # don't change
+                    if s is True or s == r'n':  # don't change
                         pass
-                    elif stat is None or stat == r'd':  # done
+                    elif s is None or s == r'd':  # done
                         raise StopIteration
-                    elif stat == list or stat == r'l':  # list
+                    elif (isinstance(val, Iterable) and
+                          (s == list or s == r'l')):  # list
                         if not done and len(buffer) > 0:
                             buffer.pop()
                         it = Iterator(val, self.__it)
@@ -238,9 +246,15 @@ class Iterator:
         self.__memo_hash = None
         return item
 
+    # controlls
+
     def reset(self):
         self.__command = None
-        self.__it = iter(self.__obj)
+        if isinstance(self.__obj, Iterator):
+            self.__it = self.__obj.clone()
+            self.__it.reset()
+        else:
+            self.__it = iter(self.__obj)
         self.__current = None
         self.__idx = -1
         self.__memo_hash = None
@@ -272,6 +286,8 @@ class Iterator:
                                        self.__cache_min,
                                        self.__cache_max))
         return self
+
+    # functional
 
     def map(self, f):
         def inner(val, done, buffer, it):
@@ -362,15 +378,78 @@ class Iterator:
 
         return self.add_command(r'groupby', inner, False, False)
 
-    def scan(self, f):
+    def cahin(self, *args):
         def inner(val, done, buffer, it):
             if done:
-                return None, None
-            ret = f(val)
-            if isinstance(ret, Iterable):
-                return ret, list
-            return val
+                def unpack():
+                    for i in args:
+                        yield i, list
+                    yield None, r'd'
+                return unpack()
+            return val, None
+        return self.add_command(r'cahin', inner, False)
+
+    def scan(self, f):
+        def inner(val, done, buffer, it):
+            return f(val), list
         return self.add_command(r'scan', inner)
+
+    def store(self):
+        stored_commands = self.clone()
+        self.commands = []
+
+        def inner(val, done, buffer, it):
+            @cache_cached(None, None, None)
+            def unpack(idx):
+                for i in stored_commands:
+                    yield i, None
+                yield None, r'd'
+            return unpack(self.__idx + 1)
+        return self.add_command(r'store', inner, False, False)
+
+    def generator(self, f):
+        def inner(val, done, buffer, it):
+            return f()
+        return self.add_command(r'generator', inner, False)
+
+    def repeat(self, n=None):
+        p = Ptr(n)
+
+        def inner(val, done, buffer, it):
+            if done:
+                if isinstance(p.p, int):
+                    if p.p <= 0:
+                        return None, r'd'
+                    p.p -= 1
+                    self.reset()
+                    return None, False  # skip
+                return None, r'd'
+            return val, None
+        return self.add_command(r'repeat', inner, False)
+
+    def takewhile(self, n=None, repeat=False):
+        p = Ptr(n)
+
+        def inner(val, done, buffer, it):
+            if six_callable(p.p):
+                if not p.p(val):
+                    return None, r'd'
+            elif isinstance(n, int):
+                if p.p <= 0:
+                    return None, r'd'
+                p.p -= 1
+            if done and repeat:
+                self.reset()
+                return None, False  # skip
+            return val, None
+        return self.add_command(r'takewhile', inner, not repeat)
+
+    '''def zip(self, f, *args):
+        for ()
+        def inner(val, done, buffer, it):
+            for i in args:
+            return f()
+        return self.add_command(r'zip', inner)'''
 
 
 if __name__ == r'__main__':

@@ -80,11 +80,13 @@ def cached(items=128, btmin=304, btmax=3072, add_to_hash=None):
                 return val[0]
 
             ret = f(*args, **kwargs)
-            size = get_size_rec(ret)
-            if size < btmin or size > btmax:
-                return ret
+            if btmin is not None or btmax is not None:
+                size = get_size_rec(ret)
+                if (btmin is not None and size < btmin) or \
+                   (btmax is not None and size > btmax):
+                    return ret
 
-            if cl > items:
+            if items is not None and cl > items:
                 minKey = None
                 minVal = None
                 for k, v in iteritems(cache):
