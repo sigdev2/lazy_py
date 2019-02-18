@@ -95,7 +95,8 @@ class Iterator:
 
         # hash
         self.__static_hash = (self.obj_strid +
-                              (r'' if self.__parent is None else str(id(self.__parent))))
+                              (r'' if self.__parent is None
+                               else str(id(self.__parent))))
 
         # reset()
         self.__command = None
@@ -258,7 +259,7 @@ class Iterator:
         elif isinstance(self.__obj, Iterable):
             return iter(self.__obj)
         elif self.__obj is None:
-            return None        
+            return None
         return iter((self.__obj))
 
     def reset(self):
@@ -334,7 +335,7 @@ class Iterator:
             elif newstate == NotImplemented:
                 newstate = st.p[-2] if last is not None else None
             return newstate
-        
+
         def clearState():
             del st.p[1:]
             ret = root.p
@@ -366,7 +367,7 @@ class Iterator:
                 else:
                     st.p[-1] = newstate
                 return False
-        
+
         if swither_inc:
             def switch(newstate, done, buf, last):
                 if newstate is None:  # state -> None
@@ -396,7 +397,6 @@ class Iterator:
                 cur.p.p.append(buf.pop())
                 return None, False  # skip
 
-
         def inner(val, done, buf, it):
             last = st.p[-1]
             buflen = len(buf)
@@ -406,7 +406,7 @@ class Iterator:
                 if len(root.p) > 0:
                     return clearState()
                 return None, None
-            
+
             newstate = getNewState(done, f, val, buf, last)
 
             # state not changed
@@ -426,12 +426,12 @@ class Iterator:
     def cahin(self, *args):
         if len(args) <= 0:
             return self
-        
+
         def unpack():
             for i in args:
                 yield i, list
             yield None, None
-    
+
         def inner(val, done, buffer, it):
             if done:
                 return unpack()
@@ -464,10 +464,11 @@ class Iterator:
         is_int = isinstance(n, int)
         if is_int and n == 1:
             return self
-     
+
         p = None
         if is_int and n > 0:
             p = Ptr(n)
+
             def inner(val, done, buffer, it):
                 if done:
                     if p.p == 1:
@@ -487,16 +488,17 @@ class Iterator:
                 return None, None
 
         return self.add_command(r'cycle', inner, False, None, p)
-    
+
     # if n == None then infinity
     def repeat(self, n=None):
         is_int = isinstance(n, int)
         if is_int and n == 1:
             return self
-     
+
         p = None
         if is_int and n > 0:
             p = Ptr(n)
+
             def inner(val, done, buffer, it):
                 if done:
                     if p.p == 1:
@@ -529,6 +531,7 @@ class Iterator:
         p = None
         if is_int and n > 0:
             p = Ptr(n)
+
             def inner(val, done, buffer, it):
                 if p.p == 0:
                     return None, None
@@ -544,7 +547,7 @@ class Iterator:
                 return None, None
 
         return self.add_command(r'takewhile', inner, True, None, p)
-    
+
     def fill(self, l, item):
         if not isinstance(l, int):
             return self
@@ -581,7 +584,6 @@ class Iterator:
 
         return self.add_command(r'fill', inner, False, None, p)
 
-
     def zip(self, f, *args):
         iters = [iter(i) for i in args]
         if self.__obj is not None:
@@ -609,7 +611,7 @@ class Iterator:
     '''def combine(self, n=2, permutations=True, recurrence=True):
         if n <= 1:
             return self
-        
+
         iters = []
         while n > 1:
             n -= 1
@@ -621,8 +623,8 @@ class Iterator:
 
         def inner(val, done, buffer, it):
 
-            
         return self.add_command(r'combine', inner)'''
+
 
 if __name__ == r'__main__':
     pass
