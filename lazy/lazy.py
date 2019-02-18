@@ -15,13 +15,14 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
-from six import callable as six_callable
+from six import callable as six_callable, string_types
 from six.moves import xrange, reduce
 try:
     from collections.abc import Iterable
 except ImportError:
     from collections import Iterable
 from collections import deque
+from numbers import Number
 import copy
 
 from .utils import TreePtr, Ptr
@@ -33,7 +34,6 @@ from .cache import cached as cache_cached
 # Refactoring tokenize functions to remove comments, split space tokens,
 #     brekets recursion, screened items, regexps
 # itertools functions
-# cached calculations
 # paralel calculatons for variatic tokenizrer and chooses in grammar
 # ReadDocs documentation
 # speed tests
@@ -83,13 +83,7 @@ class Iterator:
                  r'__memo_hash']
 
     def __init__(self, obj=None, parent=None):
-        if isinstance(obj, Iterable) or \
-           hasattr(obj, r'__iter__ ') or \
-           obj is None:
-            self.__obj = obj
-        else:
-            self.__obj = (obj)
-
+        self.__obj = obj
         self.__parent = parent
         self.__commands = []
 
@@ -100,18 +94,12 @@ class Iterator:
         self.__cache_max = 3072
 
         # hash
-        self.__static_hash = (str(obj if obj is None else id(obj)) +
-                              ('' if parent is None else str(id(parent))))
+        self.__static_hash = (self.obj_strid +
+                              (r'' if self.__parent is None else str(id(self.__parent))))
 
         # reset()
         self.__command = None
-        if isinstance(self.__obj, Iterator):
-            self.__it = self.__obj.clone()
-            self.__it.reset()
-        elif self.__obj is None:
-            self.__it = None
-        else:
-            self.__it = iter(self.__obj)
+        self.__it = self.obj_iter()
         self.__current = None
         self.__idx = -1
         self.__memo_hash = None
@@ -131,7 +119,7 @@ class Iterator:
         return self.next()
 
     def __eq__(self, other):
-        return id(self.__obj) == id(other.__obj) and \
+        return self.__static_hash == other.__static_hash and \
                self.__commands == other.__commands and \
                self.__idx == other.__idx
 
@@ -160,7 +148,7 @@ class Iterator:
 
         it.__idx = self.__idx
 
-        if self.__it is not None:
+        if self.__idx > -1 and self.__it is not None:
             source = self.__it
             own = deque()
             ex = deque()
@@ -236,7 +224,7 @@ class Iterator:
                         self.__it = it
                         # note: clear buffer is operation duty
                         is_skip = True
-                    else:  # value
+                    else:  # value, s == NotImplemented
                         item = val
                         if done or len(buffer) == 0:
                             buffer.append(item)
@@ -256,15 +244,26 @@ class Iterator:
 
     # controlls
 
+    def obj_strid(self):
+        if isinstance(self.__obj, string_types):
+            return self.__obj
+        elif isinstance(self.__obj, Number) or self.__obj is None:
+            return str(self.__obj)
+        return str(id(self.__obj))
+
+    def obj_iter(self):
+        if isinstance(self.__obj, Iterator):
+            it = self.__obj.clone()
+            it.reset()
+        elif isinstance(self.__obj, Iterable):
+            return iter(self.__obj)
+        elif self.__obj is None:
+            return None        
+        return iter((self.__obj))
+
     def reset(self):
         self.__command = None
-        if isinstance(self.__obj, Iterator):
-            self.__it = self.__obj.clone()
-            self.__it.reset()
-        elif self.__obj is None:
-            self.__it = None
-        else:
-            self.__it = iter(self.__obj)
+        self.__it = self.obj_iter()
         self.__current = None
         self.__idx = -1
         self.__memo_hash = None
@@ -311,10 +310,12 @@ class Iterator:
         return self.add_command(r'filter', inner)
 
     def remove(self, value):
-        def inner(val, done, buffer, it):
-            if isinstance(value, list):
+        if isinstance(value, Iterable):
+            def inner(val, done, buffer, it):
                 return val, val not in value
-            return val, val != value
+        else:
+            def inner(val, done, buffer, it):
+                return val, val != value
         return self.add_command(r'remove', inner)
 
     def groupby(self, f=lambda v, b, s: v, recursive=True, swither_inc=False):
@@ -322,82 +323,119 @@ class Iterator:
         st = Ptr([None])
         cur = Ptr(TreePtr(root.p))
 
-        def inner(val, done, buf, it):
+        # False = None states
+        # NotImplemented = prevues state
+        def getNewState(done, f, val, buf, last):
             newstate = None
-            last = st.p[-1]
-            if done:
-                if len(buf) == 0:
-                    if len(root.p) > 0:
-                        del st.p[1:]
-                        ret = root.p
-                        root.p = cur.p.clear([])
-                        return ret, list
-                    return None, None
-            else:
+            if not done:
                 newstate = f(val, buf, last)
-            buflen = len(buf)
-
             if newstate is False:
                 newstate = None
-            if newstate == NotImplemented:
+            elif newstate == NotImplemented:
                 newstate = st.p[-2] if last is not None else None
-            if last == newstate:  # state not changed
+            return newstate
+        
+        def clearState():
+            del st.p[1:]
+            ret = root.p
+            root.p = cur.p.clear([])
+            return ret, list
+
+        def changeCurrent(mode, last):
+            if mode:  # up
+                cur.p = cur.p.parent
+            else:  # down or liner
+                if mode is None or last is None:
+                    cur.p = TreePtr([], cur.p)
+                else:
+                    cur.p = TreePtr([], cur.p.parent)
+                cur.p.parent.p.append(cur.p.p)
+
+        if recursive:
+            def changeState(last, newstate):  # tree
+                if last is not None and st.p[-2] == newstate:  # up
+                    st.p.pop()
+                    return True
+                # else - down
+                st.p.append(newstate)
+                return None
+        else:
+            def changeState(last, newstate):  # liner
+                if last is None:
+                    st.p.append(newstate)
+                else:
+                    st.p[-1] = newstate
+                return False
+        
+        if swither_inc:
+            def switch(newstate, done, buf, last):
+                if newstate is None:  # state -> None
+                    cur.p.p.append(buf.pop())
+                    return clearState()
+                # else state -> state or  # None -> state
+                mode = changeState(last, newstate)
+                if mode:
+                    cur.p.p.append(buf.pop())
+                    changeCurrent(mode, last)
+                else:
+                    changeCurrent(mode, last)
+                    cur.p.p.append(buf.pop())
+                return None, False  # skip
+        else:
+            def switch(newstate, done, buf, last):
+                if newstate is None:  # state -> None
+                    if done:
+                        cur.p.p.append(buf.pop())
+                        ret = clearState()
+                    else:
+                        ret = clearState()
+                        ret[0].append(buf.pop())
+                    return ret
+                # else - state -> state or  # None -> state
+                changeCurrent(changeState(last, newstate), last)
+                cur.p.p.append(buf.pop())
+                return None, False  # skip
+
+
+        def inner(val, done, buf, it):
+            last = st.p[-1]
+            buflen = len(buf)
+
+            # is end
+            if done and buflen == 0:
+                if len(root.p) > 0:
+                    return clearState()
+                return None, None
+            
+            newstate = getNewState(done, f, val, buf, last)
+
+            # state not changed
+            if last == newstate:
                 if newstate is None:
                     return buf.pop(), NotImplemented
                 return None, False  # skip
-            # change state
-            for _ in xrange(buflen - 1):
-                cur.p.p.append(buf.pop(0))
-            if newstate is None:  # state -> None
-                if done or swither_inc:
-                    cur.p.p.append(buf.pop())
-                del st.p[1:]
-                ret = root.p
-                root.p = cur.p.clear([])
-                if len(buf) > 0:
-                    ret.append(buf.pop())
-                return ret, list
-            else:  # state -> state or  # None -> state
-                mode = recursive  # liner
-                if recursive:
-                    if last is not None and st.p[-2] == newstate:  # up
-                        st.p.pop()
-                    else:  # down
-                        st.p.append(newstate)
-                        mode = None
-                else:  # liner
-                    if last is None:
-                        st.p.append(newstate)
-                    else:
-                        st.p[-1] = newstate
 
-                local_si = swither_inc and mode
-                if local_si:
-                    cur.p.p.append(val)
-                if mode:  # up
-                    cur.p = cur.p.parent
-                else:  # down or liner
-                    if mode is None or last is None:
-                        cur.p = TreePtr([], cur.p)
-                    else:
-                        cur.p = TreePtr([], cur.p.parent)
-                    cur.p.parent.p.append(cur.p.p)
-                if not local_si:
-                    cur.p.p.append(val)
-            buf.pop()
-            return None, False  # skip
+            # change state
+            cur.p.p.extend(buf[0:-1])
+            del buf[0:-1]
+
+            return switch(newstate, done, buf, last)
 
         return self.add_command(r'groupby', inner, False, False)
 
     def cahin(self, *args):
+        if len(args) <= 0:
+            return self
+        
+        def unpack():
+            for i in args:
+                yield i, list
+            yield None, None
+    
         def inner(val, done, buffer, it):
             if done:
-                def unpack():
-                    for i in args:
-                        yield i, list
-                    yield None, r'd'
                 return unpack()
-            return val, None
+            return val, NotImplemented
         return self.add_command(r'cahin', inner, False)
 
     def scan(self, f):
@@ -407,78 +445,184 @@ class Iterator:
 
     def store(self):
         stored_commands = self.clone()
-        self.commands = []
+        self.__commands = []
 
+        @cache_cached(None, None, None)
         def inner(val, done, buffer, it):
-            @cache_cached(None, None, None)
-            def unpack(idx):
-                for i in stored_commands:
-                    yield i, None
-                yield None, r'd'
-            return unpack(self.__idx + 1)
+            for i in stored_commands:
+                yield i, NotImplemented
+            yield None, None
         return self.add_command(r'store', inner, False, False)
 
     def generator(self, f):
         def inner(val, done, buffer, it):
-            return f(), None
+            return f(), NotImplemented
         return self.add_command(r'generator', inner, False)
 
-    def repeat(self, n=None):
-        p = Ptr(n)
-
-        def inner(val, done, buffer, it):
-            if done:
-                if isinstance(p.p, int):
-                    if p.p <= 0:
-                        return None, r'd'
+    # if n == None then infinity
+    def cycle(self, n=None):
+        is_int = isinstance(n, int)
+        if is_int and n == 1:
+            return self
+     
+        p = None
+        if is_int and n > 0:
+            p = Ptr(n)
+            def inner(val, done, buffer, it):
+                if done:
+                    if p.p == 1:
+                        return None, None
                     p.p -= 1
                     self.reset()
                     return None, False  # skip
-                return None, r'd'
-            return val, None
-        return self.add_command(r'repeat', inner, False, True, p)
+                return val, NotImplemented
+        elif n is None:
+            def inner(val, done, buffer, it):
+                if done:
+                    self.reset()
+                    return None, False  # skip
+                return val, NotImplemented
+        else:  # n <= 0
+            def inner(val, done, buffer, it):
+                return None, None
 
-    def takewhile(self, n=None, repeat=False):
-        p = Ptr(n)
-
-        def inner(val, done, buffer, it):
-            if six_callable(p.p):
-                if not p.p(val):
-                    return None, r'd'
-            elif isinstance(n, int):
-                if p.p <= 0:
-                    return None, r'd'
-                p.p -= 1
-            if done and repeat:
-                self.reset()
-                return None, False  # skip
-            return val, None
-        return self.add_command(r'takewhile', inner, not repeat, True, p)
-
-    def zip(self, f, fill=False, *args):
-        iters = [iter(i) for i in args]
-
-        def inner(val, done, buffer, it):
-            vals = []
-            if done:
-                if fill is not False and self.__obj is not None:
-                    vals.append(fill)
-            else:
-                vals.append(val)
-
-            for it in iters:
-                try:
-                    vals.append(next(vals))
-                except StopIteration:
-                    if fill is False:
-                        return None, r'd'
+        return self.add_command(r'cycle', inner, False, None, p)
+    
+    # if n == None then infinity
+    def repeat(self, n=None):
+        is_int = isinstance(n, int)
+        if is_int and n == 1:
+            return self
+     
+        p = None
+        if is_int and n > 0:
+            p = Ptr(n)
+            def inner(val, done, buffer, it):
+                if done:
+                    if p.p == 1:
+                        if len(buffer) <= 0:
+                            return None, None
                     else:
-                        vals.append(fill)
-            return f(*vals), None
-        return self.add_command(r'zip', inner,
-                                self.__obj is not None and fill is False,
-                                True, iters)
+                        p.p -= 1
+                        self.reset()
+                    ret = buffer[0:-1]
+                    del buffer[0:-1]
+                    return ret, NotImplemented
+                return None, False  # skip
+        elif n is None:
+            def inner(val, done, buffer, it):
+                if done:
+                    self.reset()
+                    ret = buffer[0:-1]
+                    del buffer[0:-1]
+                    return ret, NotImplemented
+                return None, False  # skip
+        else:  # n <= 0 or other
+            def inner(val, done, buffer, it):
+                return None, None
 
+        return self.add_command(r'repeat', inner, False, None, p)
+
+    def takewhile(self, n=None):
+        is_int = isinstance(n, int)
+
+        p = None
+        if is_int and n > 0:
+            p = Ptr(n)
+            def inner(val, done, buffer, it):
+                if p.p == 0:
+                    return None, None
+                p.p -= 1
+                return val, NotImplemented
+        elif six_callable(n):
+            def inner(val, done, buffer, it):
+                if n(val):
+                    return val, NotImplemented
+                return None, None
+        else:  # n <= 0 or other
+            def inner(val, done, buffer, it):
+                return None, None
+
+        return self.add_command(r'takewhile', inner, True, None, p)
+    
+    def fill(self, l, item):
+        if not isinstance(l, int):
+            return self
+
+        p = None
+        if l > 0:
+            p = Ptr(0)
+
+            getItem = item
+            if isinstance(item, Iterable):
+                def gen():
+                    for i in item:
+                        yield i
+                getItem = gen
+            if six_callable(getItem):
+                def inner(val, done, buffer, it):
+                    if p.p == l:
+                        return None, None
+                    p.p += 1
+                    if done:
+                        return getItem(), NotImplemented
+                    return val, NotImplemented
+            else:
+                def inner(val, done, buffer, it):
+                    if p.p == l:
+                        return None, None
+                    p.p += 1
+                    if done:
+                        return item, NotImplemented
+                    return val, NotImplemented
+        else:  # l <= 0
+            def inner(val, done, buffer, it):
+                return None, None
+
+        return self.add_command(r'fill', inner, False, None, p)
+
+
+    def zip(self, f, *args):
+        iters = [iter(i) for i in args]
+        if self.__obj is not None:
+            def inner(val, done, buffer, it):
+                vals = [val]
+                for it in iters:
+                    try:
+                        vals.append(next(vals))
+                    except StopIteration:
+                            return None, None
+                return f(*vals), NotImplemented
+        else:
+            def inner(val, done, buffer, it):
+                vals = []
+                for it in iters:
+                    try:
+                        vals.append(next(vals))
+                    except StopIteration:
+                            return None, None
+                return f(*vals), NotImplemented
+        return self.add_command(r'zip', inner,
+                                self.__obj is not None,
+                                None, iters)
+
+    '''def combine(self, n=2, permutations=True, recurrence=True):
+        if n <= 1:
+            return self
+        
+        iters = []
+        while n > 1:
+            n -= 1
+            it = self.clone()
+
+            iters.append(self.clone().scan())
+
+        self.zip(f, NotImplemented, iters)
+
+        def inner(val, done, buffer, it):
+
+            
+        return self.add_command(r'combine', inner)'''
 
 if __name__ == r'__main__':
     pass
