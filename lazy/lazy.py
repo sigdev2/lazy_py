@@ -84,7 +84,8 @@ class Iterator:
 
     def __init__(self, obj=None, parent=None):
         if isinstance(obj, Iterable) or \
-           hasattr(obj, r'__iter__ '):
+           hasattr(obj, r'__iter__ ') or \
+           obj is None:
             self.__obj = obj
         else:
             self.__obj = (obj)
@@ -99,14 +100,16 @@ class Iterator:
         self.__cache_max = 3072
 
         # hash
-        self.__static_hash = str(id(obj)) + ('' if parent is None
-                                             else str(id(parent)))
+        self.__static_hash = (str(obj if obj is None else id(obj)) +
+                              ('' if parent is None else str(id(parent))))
 
         # reset()
         self.__command = None
         if isinstance(self.__obj, Iterator):
             self.__it = self.__obj.clone()
             self.__it.reset()
+        elif self.__obj is None:
+            self.__it = None
         else:
             self.__it = iter(self.__obj)
         self.__current = None
@@ -157,19 +160,20 @@ class Iterator:
 
         it.__idx = self.__idx
 
-        source = self.__it
-        own = deque()
-        ex = deque()
+        if self.__it is not None:
+            source = self.__it
+            own = deque()
+            ex = deque()
 
-        def gen(mydeque):
-            while True:
-                if not mydeque:             # when the local deque is empty
-                    newval = next(source)   # fetch a new value and
-                    own.append(newval)      # load it to all the deques
-                    ex.append(newval)
-                yield mydeque.popleft()
-        self.__it = gen(own)
-        it.__it = gen(ex)
+            def gen(mydeque):
+                while True:
+                    if not mydeque:             # when the local deque is empty
+                        newval = next(source)   # fetch a new value and
+                        own.append(newval)      # load it to all the deques
+                        ex.append(newval)
+                    yield mydeque.popleft()
+            self.__it = gen(own)
+            it.__it = gen(ex)
         return it
 
     def next(self):
@@ -177,19 +181,23 @@ class Iterator:
         done = True
         buffer = []
         while True:
-            while True:
-                try:
-                    item = next(self.__it)
-                    done = False
-                    break
-                except StopIteration:
-                    done = True
-                    if hasattr(self.__it, r'_Iterator__parent') and \
-                       self.__it.__parent is not None:
-                        self.__it = self.__it.__parent
-                    else:
-                        item = None
+            if self.__it is None:
+                done = True
+                item = None
+            else:
+                while True:
+                    try:
+                        item = next(self.__it)
+                        done = False
                         break
+                    except StopIteration:
+                        done = True
+                        if hasattr(self.__it, r'_Iterator__parent') and \
+                           self.__it.__parent is not None:
+                            self.__it = self.__it.__parent
+                        else:
+                            item = None
+                            break
 
             if done:
                 if len(self.__commands) == 0:
@@ -253,6 +261,8 @@ class Iterator:
         if isinstance(self.__obj, Iterator):
             self.__it = self.__obj.clone()
             self.__it.reset()
+        elif self.__obj is None:
+            self.__it = None
         else:
             self.__it = iter(self.__obj)
         self.__current = None
@@ -276,7 +286,7 @@ class Iterator:
         self.__cached = not nc
         return self
 
-    def add_command(self, cid, f, done_exit=True, cached=None):
+    def add_command(self, cid, f, done_exit=True, cached=None, hash_add=None):
         self.__memo_hash = None
         self.__commands.append(Command(cid, f,
                                        done_exit,
@@ -284,7 +294,8 @@ class Iterator:
                                        else bool(cached),
                                        self.__cache_items,
                                        self.__cache_min,
-                                       self.__cache_max))
+                                       self.__cache_max,
+                                       hash_add))
         return self
 
     # functional
@@ -409,7 +420,7 @@ class Iterator:
 
     def generator(self, f):
         def inner(val, done, buffer, it):
-            return f()
+            return f(), None
         return self.add_command(r'generator', inner, False)
 
     def repeat(self, n=None):
@@ -425,7 +436,7 @@ class Iterator:
                     return None, False  # skip
                 return None, r'd'
             return val, None
-        return self.add_command(r'repeat', inner, False)
+        return self.add_command(r'repeat', inner, False, True, p)
 
     def takewhile(self, n=None, repeat=False):
         p = Ptr(n)
@@ -442,14 +453,31 @@ class Iterator:
                 self.reset()
                 return None, False  # skip
             return val, None
-        return self.add_command(r'takewhile', inner, not repeat)
+        return self.add_command(r'takewhile', inner, not repeat, True, p)
 
-    '''def zip(self, f, *args):
-        for ()
+    def zip(self, f, fill=False, *args):
+        iters = [iter(i) for i in args]
+
         def inner(val, done, buffer, it):
-            for i in args:
-            return f()
-        return self.add_command(r'zip', inner)'''
+            vals = []
+            if done:
+                if fill is not False and self.__obj is not None:
+                    vals.append(fill)
+            else:
+                vals.append(val)
+
+            for it in iters:
+                try:
+                    vals.append(next(vals))
+                except StopIteration:
+                    if fill is False:
+                        return None, r'd'
+                    else:
+                        vals.append(fill)
+            return f(*vals), None
+        return self.add_command(r'zip', inner,
+                                self.__obj is not None and fill is False,
+                                True, iters)
 
 
 if __name__ == r'__main__':
