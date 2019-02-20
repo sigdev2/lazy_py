@@ -148,8 +148,9 @@ class Iterator:
         it.__cache_max = self.__cache_max
 
         it.__idx = self.__idx
-
-        if self.__idx > -1 and self.__it is not None:
+        if self.__it is None:
+            it.__it = None
+        elif self.__idx > -1:
             source = self.__it
             own = deque()
             ex = deque()
@@ -186,6 +187,7 @@ class Iterator:
                             self.__it = self.__it.__parent
                         else:
                             item = None
+                            self.__it = None
                             break
 
             if done:
@@ -311,12 +313,16 @@ class Iterator:
         return self.add_command(r'filter', inner)
 
     def remove(self, value):
-        if isinstance(value, Iterable):
-            def inner(val, done, buffer, it):
-                return val, val not in value
-        else:
-            def inner(val, done, buffer, it):
-                return val, val != value
+        def inner(val, done, buffer, it):
+            return val, val != value
+        return self.add_command(r'remove', inner)
+
+    def removeList(self, vallist):
+        if not isinstance(vallist, Iterable):
+            return self.remove(vallist)
+
+        def inner(val, done, buffer, it):
+            return val, val not in vallist
         return self.add_command(r'remove', inner)
 
     def groupby(self, f=lambda v, b, s: v, recursive=True, swither_inc=False):
@@ -429,7 +435,10 @@ class Iterator:
 
         def unpack():
             for i in args:
-                yield i, list
+                if isinstance(i, Iterable):
+                    yield i, list
+                else:
+                    yield i, NotImplemented
             yield None, None
 
         def inner(val, done, buffer, it):
@@ -465,6 +474,7 @@ class Iterator:
         if is_int and n == 1:
             return self
 
+        base = []
         p = None
         if is_int and n > 0:
             p = Ptr(n)
@@ -474,14 +484,14 @@ class Iterator:
                     if p.p == 1:
                         return None, None
                     p.p -= 1
-                    self.reset()
-                    return None, False  # skip
+                    return base, list
+                base.append(val)
                 return val, NotImplemented
         elif n is None:
             def inner(val, done, buffer, it):
                 if done:
-                    self.reset()
-                    return None, False  # skip
+                    return base, list
+                base.append(val)
                 return val, NotImplemented
         else:  # n <= 0
             def inner(val, done, buffer, it):
@@ -491,33 +501,33 @@ class Iterator:
 
     # if n == None then infinity
     def repeat(self, n=None):
-        is_int = isinstance(n, int)
-        if is_int and n == 1:
-            return self
-
+        base = []
+        is_c = Ptr(True)
         p = None
-        if is_int and n > 0:
+        if isinstance(n, int) and n > 0:
             p = Ptr(n)
 
             def inner(val, done, buffer, it):
                 if done:
-                    if p.p == 1:
-                        if len(buffer) <= 0:
-                            return None, None
-                    else:
+                    if is_c.p:
+                        if len(buffer) > 0:
+                            base.extend(buffer[:])
+                            del buffer[:]
+                        is_c.p = False
+                    if p.p > 0:
                         p.p -= 1
-                        self.reset()
-                    ret = buffer[0:-1]
-                    del buffer[0:-1]
-                    return ret, NotImplemented
+                        return base, NotImplemented
+                    return None, None
                 return None, False  # skip
         elif n is None:
             def inner(val, done, buffer, it):
                 if done:
-                    self.reset()
-                    ret = buffer[0:-1]
-                    del buffer[0:-1]
-                    return ret, NotImplemented
+                    if is_c.p:
+                        if len(buffer) > 0:
+                            base.extend(buffer[:])
+                            del buffer[:]
+                        is_c.p = False
+                    return base, NotImplemented
                 return None, False  # skip
         else:  # n <= 0 or other
             def inner(val, done, buffer, it):
@@ -526,10 +536,8 @@ class Iterator:
         return self.add_command(r'repeat', inner, False, None, p)
 
     def takewhile(self, n=None):
-        is_int = isinstance(n, int)
-
         p = None
-        if is_int and n > 0:
+        if isinstance(n, int) and n > 0:
             p = Ptr(n)
 
             def inner(val, done, buffer, it):
@@ -555,7 +563,6 @@ class Iterator:
         p = None
         if l > 0:
             p = Ptr(0)
-
             getItem = item
             if isinstance(item, Iterable):
                 def gen():
@@ -585,7 +592,14 @@ class Iterator:
         return self.add_command(r'fill', inner, False, None, p)
 
     def zip(self, f, *args):
-        iters = [iter(i) for i in args]
+        def unpack():
+            for i in args:
+                if isinstance(i, Iterable):
+                    yield iter(i)
+                else:
+                    yield iter((i))
+        iters = [i for i in unpack()]
+
         if self.__obj is not None:
             def inner(val, done, buffer, it):
                 vals = [val]
@@ -608,22 +622,24 @@ class Iterator:
                                 self.__obj is not None,
                                 None, iters)
 
-    '''def combine(self, n=2, permutations=True, recurrence=True):
+    def combine(self, n=2, permutations=True, recurrence=True):
         if n <= 1:
             return self
+        base = []
 
-        iters = []
-        while n > 1:
-            n -= 1
-            it = self.clone()
-
-            iters.append(self.clone().scan())
-
-        self.zip(f, NotImplemented, iters)
+        def comb(buf, index, r):
+            bl = len(buf)
+            for _ in xrange(r):
+                i = index % bl
+                index = index / bl
+                yield buf[i]
 
         def inner(val, done, buffer, it):
+            if not done:
+                base.append(val)
+            return (i for i in comb(base, it.__idx + 1, n)), NotImplemented
 
-        return self.add_command(r'combine', inner)'''
+        return self.add_command(r'combine', inner, False)
 
 
 if __name__ == r'__main__':
