@@ -23,6 +23,7 @@ except ImportError:
     from collections import Iterable
 from collections import deque
 from numbers import Number
+from math import factorial as fac
 import copy
 
 from .utils import TreePtr, Ptr
@@ -468,6 +469,11 @@ class Iterator:
             return f(), NotImplemented
         return self.add_command(r'generator', inner, False)
 
+    def toempty(self):
+        def inner(val, done, buffer, it):
+            return None, None
+        return self.add_command(r'toempty', inner, False, False)
+
     # if n == None then infinity
     def cycle(self, n=None):
         is_int = isinstance(n, int)
@@ -494,8 +500,7 @@ class Iterator:
                 base.append(val)
                 return val, NotImplemented
         else:  # n <= 0
-            def inner(val, done, buffer, it):
-                return None, None
+            return self.toempty()
 
         return self.add_command(r'cycle', inner, False, None, p)
 
@@ -530,8 +535,7 @@ class Iterator:
                     return base, NotImplemented
                 return None, False  # skip
         else:  # n <= 0 or other
-            def inner(val, done, buffer, it):
-                return None, None
+            return self.toempty()
 
         return self.add_command(r'repeat', inner, False, None, p)
 
@@ -551,17 +555,13 @@ class Iterator:
                     return val, NotImplemented
                 return None, None
         else:  # n <= 0 or other
-            def inner(val, done, buffer, it):
-                return None, None
+            return self.toempty()
 
         return self.add_command(r'takewhile', inner, True, None, p)
 
     def fill(self, l, item):
-        if not isinstance(l, int):
-            return self
-
         p = None
-        if l > 0:
+        if isinstance(l, int) and l > 0:
             p = Ptr(0)
             getItem = item
             if isinstance(item, Iterable):
@@ -585,9 +585,8 @@ class Iterator:
                     if done:
                         return item, NotImplemented
                     return val, NotImplemented
-        else:  # l <= 0
-            def inner(val, done, buffer, it):
-                return None, None
+        else:  # l <= 0 or other
+            return self.toempty()
 
         return self.add_command(r'fill', inner, False, None, p)
 
@@ -623,21 +622,80 @@ class Iterator:
                                 None, iters)
 
     def combine(self, n=2, permutations=True, recurrence=True):
-        if n <= 1:
+        if not isinstance(n, int) or n < 1:
+            return self.toempty()
+        elif n == 1:
             return self
-        base = []
 
-        def comb(buf, index, r):
-            bl = len(buf)
-            for _ in xrange(r):
-                i = index % bl
-                index = index / bl
-                yield buf[i]
+        base = []
+        bl = Ptr(0)
+        limit = Ptr(None)
+        skip = None
+        r = xrange(n)
+
+        if permutations and recurrence:
+            # placement with recurrence
+            def check():  # bl**n
+                limit.p = bl.p**n
+
+            def comb(buf, l, index):  # n: 2 ... infinity
+                for _ in r:
+                    i = index % l.p
+                    index = index // l.p
+                    yield buf[i]
+        elif permutations:
+            # placement without recurrence
+            skip = n
+
+            def check():  # bl! / (bl - n)!
+                k = (bl.p if n > bl.p else n)
+                limit.p = fac(bl.p) // fac(bl.p - k)
+
+            '''def single(buf, l, index):  # n: 2 ... bl
+                for i in r:
+                    if i == l.p:
+                        break
+                    yield buf[(index + i) % l.p]
+
+            def comb(buf, l, index):'''
+ 
+        elif recurrence:
+            # combinations with recurrence
+            def check():  # (bl + n - 1)! / (bl - 1)! * n!
+                limit.p = fac(bl.p + n - 1) // fac(bl.p - 1) * fac(n)
+
+            '''def comb(buf, l, index):  # n: 2 ... infinity
+                for _ in r:
+                    i = index % l.p
+                    index = index // l.p
+                    yield buf[i]'''
+        else:  # not permutations and not recurrence
+            # combinations without recurrence
+            skip = n
+
+            def check():  # bl! / (bl - n)! * n!
+                k = (bl.p if n > bl.p else n)
+                limit.p = fac(bl.p) // fac(bl.p - k) * fac(k)
+
+            def comb(buf, l, index):  # n: 2 ... bl
+                for i in r:
+                    if i == l.p:
+                        break
+                    yield buf[(index + i) % l.p]
 
         def inner(val, done, buffer, it):
+            check(done)
             if not done:
+                bl.p += 1
                 base.append(val)
-            return (i for i in comb(base, it.__idx + 1, n)), NotImplemented
+                if skip is not None and bl.p < skip:
+                    return None, False  # skip
+            elif limit.p is None:
+                limit.p = check()
+            if bl.p > 0 and (limit.p is None or it.__idx < limit.p - 1):
+                return ((i for i in comb(base, bl, it.__idx + 1)),
+                        NotImplemented)
+            return None, None
 
         return self.add_command(r'combine', inner, False)
 
