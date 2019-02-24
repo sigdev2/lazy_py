@@ -57,14 +57,14 @@ class TestLazyIterator(unittest.TestCase):
     def test_remove(self):
         text = r'word1,word2,word3'
         out = r''
-        for ch in lazy.Iterator(text).remove([r'o', r'd']):
+        for ch in lazy.Iterator(text).removeList([r'o', r'd']):
             out += ch
         self.assertEqual(out, r'wr1,wr2,wr3')
 
     def test_remove_ex(self):
         iterable_object = r'string iterate by symbol'
         out = r''
-        for ch in lazy.Iterator(iterable_object).remove(r' ').remove(
+        for ch in lazy.Iterator(iterable_object).remove(r' ').removeList(
           [r'i', r'o', r'a', r'e', r'y']):
             out += ch
         self.assertEqual(out, r'strngtrtbsmbl')
@@ -404,6 +404,7 @@ class TestLazyParser(unittest.TestCase):
         self.assertTrue(grammar.check(text))
         text = lazy.tokenizer.Wordizer(r'do re mi fa')
         self.assertTrue(grammar.check(text))"""
+
 
 if __name__ == r'__main__':
     unittest.main(exit=False)

@@ -95,7 +95,7 @@ class Iterator:
         self.__cache_max = 3072
 
         # hash
-        self.__static_hash = (self.obj_strid +
+        self.__static_hash = (self.obj_strid() +
                               (r'' if self.__parent is None
                                else str(id(self.__parent))))
 
@@ -658,7 +658,7 @@ class Iterator:
                     yield buf[(index + i) % l.p]
 
             def comb(buf, l, index):'''
- 
+
         elif recurrence:
             # combinations with recurrence
             def check():  # (bl + n - 1)! / (bl - 1)! * n!
