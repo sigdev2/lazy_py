@@ -37,8 +37,12 @@ def speed_zip_it():
     one = [1, 2, 3, 4]
     two = [4, 3, 2, 1]
     out = []
-    for o in itertools.izip(one, two):
-        out.append(o)
+    try:
+        for o in itertools.izip(one, two):
+            out.append(o)
+    except:
+        for o in itertools.zip_longest(one, two):
+            out.append(o)
 
 
 if __name__ == r'__main__':

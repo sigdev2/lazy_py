@@ -39,3 +39,7 @@ if __name__ == r'__main__':
     print(r'----speed_takewhile----')
     testVS(r'speed_takewhile_n', r'speed_takewhile_n_it', r'speed_takewhile')
     testVS(r'speed_takewhile_f', r'speed_takewhile_f_it', r'speed_takewhile')
+    print(r'----speed_repeat-------')
+    testVS(r'speed_repeat', r'speed_repeat_it', r'speed_repeat')
+    print(r'----speed_map-------')
+    testVS(r'speed_map', r'speed_map_it', r'speed_map')

@@ -37,6 +37,9 @@ from .cache import cached as cache_cached
 # itertools functions
 # paralel calculatons for variatic tokenizrer and chooses in grammar
 # ReadDocs documentation
+# thread pool for map
+# map many arguments function
+# fix bugs with differend functions commands for one command if - need include command parameters
 # speed tests
 # use Coverage for tests
 # use Tox for test compatibility
