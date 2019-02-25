@@ -29,10 +29,11 @@ def speed_map():
     for n in lazy.Iterator(arr).map(lambda x: x**2):
         out.append(n)
 
+
 def speed_map_it():
     arr = [1, 2, 3, 4, 5]
     out = []
-    
+
     try:
         for n in itertools.imap(lambda x: x**2, arr):
             out.append(n)

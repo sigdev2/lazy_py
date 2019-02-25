@@ -29,6 +29,7 @@ def speed_repeat():
     for n in lazy.Iterator(xrange(10)).repeat(2):
         out.append(n)
 
+
 def speed_repeat_it():
     out = []
     for n in itertools.repeat(xrange(10), 2):

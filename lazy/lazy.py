@@ -433,7 +433,7 @@ class Iterator:
 
         return self.add_command(r'groupby', inner, False, False)
 
-    def cahin(self, *args):
+    def chain(self, *args):
         if len(args) <= 0:
             return self
 
@@ -445,11 +445,13 @@ class Iterator:
                     yield i, NotImplemented
             yield None, None
 
+        ret = unpack()
+
         def inner(val, done, buffer, it):
             if done:
-                return unpack()
+                return next(ret)
             return val, NotImplemented
-        return self.add_command(r'cahin', inner, False)
+        return self.add_command(r'chain', inner, False)
 
     def scan(self, f):
         def inner(val, done, buffer, it):

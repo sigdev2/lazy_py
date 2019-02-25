@@ -23,24 +23,22 @@ sys.path.insert(0, realpath(dirname(realpath(__file__)) + r'/..'))
 import lazy
 
 
-def speed_filter():
+def speed_chain():
+    text = r'a{[()][(][)]}b'
     arr = [1, 2, 3, 4, 5]
     out = []
 
-    for ch in lazy.Iterator(arr).filter(lambda x: x != 2):
+    for ch in lazy.Iterator(text).chain(arr):
         out.append(ch)
 
 
-def speed_filter_it():
+def speed_chain_it():
+    text = r'a{[()][(][)]}b'
     arr = [1, 2, 3, 4, 5]
     out = []
 
-    try:
-        for ch in itertools.ifilter(arr, lambda x: x != 2):
-            out.append(ch)
-    except:
-        for ch in itertools.filterfalse(lambda x: x != 2, arr):
-            out.append(ch)
+    for ch in itertools.chain(text, arr):
+        out.append(ch)
 
 
 if __name__ == r'__main__':

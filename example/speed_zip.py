@@ -27,6 +27,7 @@ def speed_zip():
     one = [1, 2, 3, 4]
     two = [4, 3, 2, 1]
     out = []
+
     def totuple(*args):
         return (i for i in args)
     for o in lazy.Iterator(one).zip(totuple, two):
