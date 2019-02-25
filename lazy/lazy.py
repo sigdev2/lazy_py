@@ -604,18 +604,18 @@ class Iterator:
                 vals = [val]
                 for it in iters:
                     try:
-                        vals.append(next(vals))
+                        vals.append(next(it))
                     except StopIteration:
-                            return None, None
+                        return None, None
                 return f(*vals), NotImplemented
         else:
             def inner(val, done, buffer, it):
                 vals = []
                 for it in iters:
                     try:
-                        vals.append(next(vals))
+                        vals.append(next(it))
                     except StopIteration:
-                            return None, None
+                        return None, None
                 return f(*vals), NotImplemented
         return self.add_command(r'zip', inner,
                                 self.__obj is not None,

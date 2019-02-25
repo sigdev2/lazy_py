@@ -15,7 +15,6 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
-#import cProfile
 import timeit
 
 
@@ -31,5 +30,12 @@ def testVS(one, two, module, times=10):
 
 
 if __name__ == r'__main__':
+    print(r' lazy_py  ||  itertools')
+    print(r'----speed_groupby------')
     testVS(r'speed_groupby_liner', r'speed_groupby_liner_it', r'speed_groupby')
     testVS(r'speed_groupby_rec', r'speed_groupby_rec_it', r'speed_groupby')
+    print(r'----speed_zip----------')
+    testVS(r'speed_zip', r'speed_zip_it', r'speed_zip')
+    print(r'----speed_takewhile----')
+    testVS(r'speed_takewhile_n', r'speed_takewhile_n_it', r'speed_takewhile')
+    testVS(r'speed_takewhile_f', r'speed_takewhile_f_it', r'speed_takewhile')
