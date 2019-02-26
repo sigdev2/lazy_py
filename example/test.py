@@ -16,13 +16,7 @@ r''' Copyright 2018, SigDev
    limitations under the License. '''
 
 import unittest
-
-from os.path import realpath
-from os.path import dirname
-import sys
-sys.path.insert(0, realpath(dirname(realpath(__file__)) + r'/..'))
 import lazy
-
 
 class TestLazyIterator(unittest.TestCase):
     def test_map(self):
@@ -202,19 +196,19 @@ class TestCahche(unittest.TestCase):
         val3 = "1234"
         val4 = {r'1': 1, r'4': 4, r'3': 3, r'2': 2}
 
-        @lazy.cached()
+        @lazy.cached_func()
         def func1():
             return val1
 
-        @lazy.cached()
+        @lazy.cached_func()
         def func2():
             return val2
 
-        @lazy.cached()
+        @lazy.cached_func()
         def func3():
             return val3
 
-        @lazy.cached()
+        @lazy.cached_func()
         def func4():
             return val4
 

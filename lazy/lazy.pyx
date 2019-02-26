@@ -26,6 +26,9 @@ from numbers import Number
 from math import factorial as fac
 import copy
 
+from libcpp.map cimport map
+from libcpp.string cimport string
+
 from utils import TreePtr, Ptr
 from cache import cached as cached_func
 
@@ -48,8 +51,9 @@ __all__ = [r'Iterator', r'cached_func']
 # perfomance compare with iterator tools
 
 
-class Command:
-    __slots__ = [r'op', r'id', r'__hash']
+cdef class Command:
+    cdef string cid
+    cdef string cid
 
     def __init__(self, cid, f, done_exit=True,
                  cached=True, cache_items=128,

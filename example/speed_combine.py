@@ -16,10 +16,6 @@ r''' Copyright 2018, SigDev
    limitations under the License. '''
 
 import itertools
-from os.path import realpath
-from os.path import dirname
-import sys
-sys.path.insert(0, realpath(dirname(realpath(__file__)) + r'/..'))
 import lazy
 
 

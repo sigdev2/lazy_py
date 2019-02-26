@@ -15,29 +15,12 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
-import itertools
-import lazy
+from distutils.core import setup
+from distutils.extension import Extension
+from Cython.Build import cythonize
 
+extensions = [r'cache.pyx', r'utils.pyx', r'lazy.pyx']
 
-def speed_filter():
-    arr = [1, 2, 3, 4, 5]
-    out = []
-
-    for ch in lazy.Iterator(arr).filter(lambda x: x != 2):
-        out.append(ch)
-
-
-def speed_filter_it():
-    arr = [1, 2, 3, 4, 5]
-    out = []
-
-    try:
-        for ch in itertools.ifilter(arr, lambda x: x != 2):
-            out.append(ch)
-    except:
-        for ch in itertools.filterfalse(lambda x: x != 2, arr):
-            out.append(ch)
-
-
-if __name__ == r'__main__':
-    pass
+setup(
+    ext_modules = cythonize(extensions)
+)

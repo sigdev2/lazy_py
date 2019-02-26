@@ -15,12 +15,8 @@ r''' Copyright 2018, SigDev
    See the License for the specific language governing permissions and
    limitations under the License. '''
 
-import itertools
 from six.moves import xrange
-from os.path import realpath
-from os.path import dirname
-import sys
-sys.path.insert(0, realpath(dirname(realpath(__file__)) + r'/..'))
+import itertools
 import lazy
 
 
