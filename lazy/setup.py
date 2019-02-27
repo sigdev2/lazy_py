@@ -19,7 +19,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 
-extensions = [r'cache.pyx', r'utils.pyx', r'lazy.pyx']
+extensions = [r'lazy.pyx']
 
 setup(
     ext_modules = cythonize(extensions)
