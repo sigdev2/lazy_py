@@ -3,7 +3,7 @@
 #ifndef __LAZY_COMMANDS_H__
 #define __LAZY_COMMANDS_H__
 
-#include<tuple>
+#include "defines.h"
 
 namespace Lazy
 {
@@ -20,7 +20,7 @@ namespace Lazy
             eNotChanged
         };
 
-        typedef std::tuple<TValue*, ECommandRet> TRetTuple;
+        typedef Tuple<TValue*, ECommandRet> TRetTuple;
 
         Command() {};
 
