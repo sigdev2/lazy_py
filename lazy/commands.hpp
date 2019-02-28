@@ -20,13 +20,28 @@ namespace Lazy
             eNotChanged
         };
 
-        typedef Tuple<TValue*, ECommandRet> TRetTuple;
+        struct SCommandRet
+        {
+            SCommandRet(SharedPtrSpecCRef<TValue> _val, ECommandRet _code)
+                : val(_val), code(_code) {};
+            SharedPtrSpec<TValue> val;
+            ECommandRet code;
+        }
+        
+        struct SRetValue
+        {
+            SRetValue(SharedPtrSpecCRef<TValue> _val, bool _done)
+                : val(_val), done(_done) {};
+            SharedPtrSpec<TValue> val;
+            bool done;
+        }
 
         Command() {};
 
-        int id() const { return reinterpret_cast<int>(*this); }
-        virtual TRetTuple exec(TValue* val, bool done, TBuffer* buffer, int idx) const
-            { return TRetTuple(val, eDone); }
+        virtual SCommandRet exec(SRetValue& val, TBuffer& buffer, int idx) const
+        {
+            return SCommandRet(val.val, (val.done ? eDone : eNotChanged));
+        }
     };
 }
 

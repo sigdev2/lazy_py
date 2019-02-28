@@ -9,152 +9,199 @@
 
 namespace Lazy
 {
+    // globals
+
     template<typename TObject, typename TIterator>
-    TIterator* iter(TObject* obj) { _ass(false); return NULL; }
+    SharedPtrSpec<TIterator> iter(SharedPtrSpecCRef<TObject> obj) { _ass(false); return NULL; }
     template<typename TIterator, typename TValue>
-    TValue* next(TIterator* it) { _ass(false); return NULL; }
+    SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it) { _ass(false); return NULL; }
 
     template<typename TObject, typename TIterator, typename TValue>
     class Iterator
     {
     public:
-        Iterator(TObject* obj = NULL, void* parent = NULL)
-           : _idx(0), _obj(obj), _parent(parent), _it(NULL)
-        {
-            reset();
-        }
+        // types
 
-        void* parent() const { return _parent; }
+        typedef List<SharedPtrSpec<TValue> > TBuffer;
+        typedef Command<TValue, TBuffer>::SRetValue TRetValue;
+        typedef Command<TValue, TBuffer>::SCommandRet TCommandRet;
+        typedef Command<TValue, TBuffer> TCommand;
+        typedef SharedPtr<Command<TValue, TBuffer> > TCommandPtr;
+         
+        enum EConst
+        {
+            eReservedCommands = 3
+        };
+
+        // constructor/destructor
+
+        Iterator(SharedPtrSpecCRef<TObject> obj = NULL, Iterator* parent = NULL)
+           : _idx(0), _obj(obj), _parent(parent), _it(NULL) { _commands.reserve(eReservedCommands); reset(); }
+
+        // properties
+
+        Iterator* parent() const { return _parent; }
+
+        // methods
 
         Iterator<TObject, TIterator, TValue>* reset()
         {
-            if (_obj == NULL)
-                delete _it;
-                _it = NULL;
-            else
-                delete _it;
-                _it = STreeIterator(iter<TObject, TIterator>(_obj));
+            _it.reset(NULL);
+            if (_obj.get() != NULL)
+                _it.reset(new STreeIterator(iter<TObject, TIterator>(_obj)));
             _idx = 0;
             return this;
         }
 
-        TValue* next()
+        Iterator<TObject, TIterator, TValue>* clear()
         {
-            TValue* item = NULL;
-            bool done = true
-            List buffer;
-            while(true)
+            _commands.clear();
+            _commands.shrink_to_fit();
+            _commands.reserve(eReservedCommands);
+            reset();
+        }
+
+        Iterator<TObject, TIterator, TValue>*  add(TCommandPtr cmd)
+        {
+            _commands.push_back(cmd);
+        }
+
+        SharedPtrSpec<TValue> next()
+        {
+            TRetValue val(NULL, true);
+            TBuffer buffer;
+            while (true)
             {
-                if (_it == NULL)
+                _get_next(val);
+
+                if (done)
                 {
-                    done = true;
-                    item = NULL;
+                    if (self.__commands.empty())
+                        throw Exception("StopIteration");
                 }
                 else
                 {
-                    while(true)
+                    buffer.push_back(item);
+                }
+                
+                bool is_skip = false;
+                const size_t l = _commands.size();
+                for (size_t i = _it->command; i < l; ++i)
+                {
+                    while (true)
                     {
-                        try
+                        TCommandRet ret = _commands[i]->exec(val, buffer, _idx);
+                        
+                        if (!val.done)
                         {
-                            item = next<TIterator, TValue>(_it.it);
-                            done = false;
-                            break;
-                        }
-                        catch(...)
-                        {
-                            done = true;
-                            if (_it._parent == NULL)
+                            if (ret.code == Command::eSkip)
                             {
-                                item = NULL;
-                                delete _it
-                                _it = NULL;
+                                is_skip = true;
                                 break;
                             }
-                            else
-                            {
-                                _it.it = _parent;
-                            }
-                            
-                                self.__it = self.__it.__parent
-                            else:
-                        }
-                    }
-                }
-
-                if done:
-                    if len(self.__commands) == 0:
-                        raise StopIteration
-                else:
-                    buffer.append(item)
-                is_skip = False
-                start = self.__command
-                if hasattr(self.__it, r'_Iterator__command'):
-                    start = self.__it.__command
-                for i in xrange(len(self.__commands)):
-                    while True:
-                        if start is not None:
-                            i = start
-                            start = None
-
-                        if i >= len(self.__commands):
-                            break
-                        val, s = self.__commands[i].op(item, done, buffer, self)
-                        if not done:
-                            if s is False or s == r's':  # skip
-                                is_skip = True
-                                break
-                            elif s == r'r':  # repeat
+                            if (ret.code == Command::eRepeat)
                                 continue
-                        if s is True or s == r'n':  # don't change
-                            pass
-                        elif s is None or s == r'd':  # done
-                            raise StopIteration
-                        elif (isinstance(val, Iterable) and
-                            (s == list or s == r'l')):  # list
-                            if not done and len(buffer) > 0:
-                                buffer.pop()
-                            it = Iterator(val, self.__it)
-                            it.__command = i + 1
-                            self.__it = it
-                            # note: clear buffer is operation duty
-                            is_skip = True
-                        else:  # value, s == NotImplemented
-                            item = val
+                        }
+
+                        if (ret.code == Command::eDone)
+                            throw Exception("StopIteration");
+                        
+                        if (ret.code == Command::eList)
+                        {
+                            if (!val.done && !buffer.empty())
+                                buffer.pop_back();
+                            SharedPtr<STreeIterator> it(iter<TValue, TIterator>(ret.val),
+                                                        _it, _command + 1);
+                            _it.reset(it);
+                            // note: clear buffer is operation duty
+                            is_skip = true;
+                        }
+                        else // Command::eNotChanged
+                        {
+                            item.reset(ret.val)
                             if done or len(buffer) == 0:
                                 buffer.append(item)
                             else:
                                 buffer[-1] = item
-                        break
-                    if is_skip:
-                        break
-                if is_skip:
-                    continue
-                break
+                        }
+                        break;
+                    }
 
-            self.__current = item
-            self.__idx += 1
-            self.__memo_hash = None
-            return item
+                    if (is_skip)
+                        break;
+                }
+
+                if (is_skip)
+                    continue;
+
+                break;
             }
+
+            ++_idx;
+            return item;
         }
     
     private:
+        // types
+
         struct STreeIterator
         {
-            TObject* it;
-            STreeIterator* parent;
+            SharedPtrSpec<TIterator> it;
+            SharedPtr<STreeIterator> parent;
             size_t command;
 
-            STreeIterator(TObject* _it = NULL,
-                          STreeIterator* _parent = NULL,
+            STreeIterator(SharedPtrSpecCRef<TIterator> _it = NULL,
+                          SharedPtrCRef<STreeIterator> _parent = NULL,
                           size_t _command = 0)
                 : it(_it), parent(_parent), command(_command) {}
+        };
+
+        // statics
+
+        static TRetValue& _get_next(TRetValue& old, SharedPtr<STreeIterator>& it)
+        {
+            if (it.get() == NULL)
+            {
+                old.done = true;
+                old.val.reset(NULL);
+            }
+            else
+            {
+                while (true)
+                {
+                    try
+                    {
+                        old.done = false;
+                        old.val.reset(next<TIterator, TValue>(_it->it));
+                        break;
+                    }
+                    catch(...)
+                    {
+                        old.done = true;
+                        if (it->parent == NULL)
+                        {
+                            old.val.reset(NULL);
+                            it.reset(NULL);
+                            break;
+                        }
+                        else
+                        {
+                            it.reset(it->parent);
+                        }
+                    }
+                }
+            }
+
+            return old;
         }
 
+        // members
+
         int _idx;
-        TObject* _obj;
-        STreeIterator* _it;
-        void* _parent;
+        SharedPtrSpec<TObject> _obj;
+        SharedPtr<STreeIterator> _it;
+        Vector<TCommandPtr> _commands;
+        Iterator* _parent;
     };
 }
 
