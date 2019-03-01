@@ -3,8 +3,6 @@
 #ifndef __LAZY_COMMANDS_H__
 #define __LAZY_COMMANDS_H__
 
-#include "defines.h"
-
 namespace Lazy
 {
     template<typename TValue, typename TBuffer>

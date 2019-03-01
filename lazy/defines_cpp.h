@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef __LAZY_DEFINES_H__
-#define __LAZY_DEFINES_H__
+#ifndef __LAZY_DEFINES_CPP_H__
+#define __LAZY_DEFINES_CPP_H__
 
 #include <assert.h>
 
@@ -34,4 +34,4 @@ using SharedPtrSpecCRef = const std::shared_ptr<A>&;
 
 typedef std::exception Exception;
 
-#endif // __LAZY_DEFINES_H__
+#endif // __LAZY_DEFINES_CPP_H__

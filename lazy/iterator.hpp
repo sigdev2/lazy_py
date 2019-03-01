@@ -3,8 +3,6 @@
 #ifndef __LAZY_ITERATOR_H__
 #define __LAZY_ITERATOR_H__
 
-#include "defines.h"
-
 #include "commands.hpp"
 
 namespace Lazy
@@ -16,7 +14,7 @@ namespace Lazy
     template<typename TIterator, typename TValue>
     SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it) { _ass(false); return NULL; }
 
-    template<typename TObject, typename TIterator, typename TValue>
+    template<class TObject, class TIterator, class TValue>
     class Iterator
     {
     public:
@@ -37,6 +35,7 @@ namespace Lazy
 
         Iterator(SharedPtrSpecCRef<TObject> obj = NULL, Iterator* parent = NULL)
            : _idx(0), _obj(obj), _parent(parent), _it(NULL) { _commands.reserve(eReservedCommands); reset(); }
+        virtual ~Iterator() { }
 
         // properties
 
@@ -46,9 +45,10 @@ namespace Lazy
 
         Iterator<TObject, TIterator, TValue>* reset()
         {
-            _it.reset(NULL);
             if (_obj.get() != NULL)
                 _it.reset(new STreeIterator(iter<TObject, TIterator>(_obj)));
+            else
+                _it.reset();
             _idx = 0;
             return this;
         }
@@ -58,12 +58,13 @@ namespace Lazy
             _commands.clear();
             _commands.shrink_to_fit();
             _commands.reserve(eReservedCommands);
-            reset();
+            return reset();
         }
 
         Iterator<TObject, TIterator, TValue>*  add(TCommandPtr cmd)
         {
             _commands.push_back(cmd);
+            return this;
         }
 
         SharedPtrSpec<TValue> next()
@@ -74,14 +75,14 @@ namespace Lazy
             {
                 _get_next(val);
 
-                if (done)
+                if (val.done)
                 {
-                    if (self.__commands.empty())
+                    if (_commands.empty())
                         throw Exception("StopIteration");
                 }
                 else
                 {
-                    buffer.push_back(item);
+                    buffer.push_back(val.val);
                 }
                 
                 bool is_skip = false;
@@ -94,35 +95,34 @@ namespace Lazy
                         
                         if (!val.done)
                         {
-                            if (ret.code == Command::eSkip)
+                            if (ret.code == TCommand::eSkip)
                             {
                                 is_skip = true;
                                 break;
                             }
-                            if (ret.code == Command::eRepeat)
-                                continue
+                            if (ret.code == TCommand::eRepeat)
+                                continue;
                         }
 
-                        if (ret.code == Command::eDone)
+                        if (ret.code == TCommand::eDone)
                             throw Exception("StopIteration");
                         
-                        if (ret.code == Command::eList)
+                        if (ret.code == TCommand::eList)
                         {
                             if (!val.done && !buffer.empty())
                                 buffer.pop_back();
-                            SharedPtr<STreeIterator> it(iter<TValue, TIterator>(ret.val),
-                                                        _it, _command + 1);
-                            _it.reset(it);
+                            SharedPtr<STreeIterator> it(new STreeIterator(iter<TValue, TIterator>(ret.val),
+                                                        _it, _it->command + 1));
+                            _it = it;
                             // note: clear buffer is operation duty
                             is_skip = true;
                         }
                         else // Command::eNotChanged
                         {
-                            item.reset(ret.val)
-                            if done or len(buffer) == 0:
-                                buffer.append(item)
-                            else:
-                                buffer[-1] = item
+                            val.val = ret.val;
+                            if (!val.done && !buffer.empty())
+                                buffer.pop_back();
+                            buffer.push_back(val.val);
                         }
                         break;
                     }
@@ -138,7 +138,7 @@ namespace Lazy
             }
 
             ++_idx;
-            return item;
+            return val.val;
         }
     
     private:
@@ -158,12 +158,12 @@ namespace Lazy
 
         // methods
 
-        TRetValue& _get_next(TRetValue& old, SharedPtr<STreeIterator>& it) const
+        TRetValue& _get_next(TRetValue& old)
         {
-            if (it.get() == NULL)
+            if (_it.get() == NULL)
             {
                 old.done = true;
-                old.val.reset(NULL);
+                old.val.reset();
             }
             else
             {
@@ -172,21 +172,21 @@ namespace Lazy
                     try
                     {
                         old.done = false;
-                        old.val.reset(next<TIterator, TValue>(_it->it));
+                        old.val = Lazy::next<TIterator, TValue>(_it->it);
                         break;
                     }
                     catch(...)
                     {
                         old.done = true;
-                        if (it->parent == NULL)
+                        if (_it->parent == NULL)
                         {
-                            old.val.reset(NULL);
-                            it.reset(NULL);
+                            old.val.reset();
+                            _it.reset();
                             break;
                         }
                         else
                         {
-                            it.reset(it->parent);
+                            _it = _it->parent;
                         }
                     }
                 }

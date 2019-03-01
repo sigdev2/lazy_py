@@ -22,5 +22,11 @@
   <ItemGroup>
     <ClCompile Include="test.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bind_cpp.h" />
+    <ClInclude Include="commands.hpp" />
+    <ClInclude Include="defines_cpp.h" />
+    <ClInclude Include="iterator.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Targets" />
 </Project>
