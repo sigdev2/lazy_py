@@ -26,7 +26,7 @@ namespace Lazy
                 : val(_val), code(_code) {};
             SharedPtrSpec<TValue> val;
             ECommandRet code;
-        }
+        };
         
         struct SRetValue
         {
@@ -34,7 +34,7 @@ namespace Lazy
                 : val(_val), done(_done) {};
             SharedPtrSpec<TValue> val;
             bool done;
-        }
+        };
 
         Command() {};
 

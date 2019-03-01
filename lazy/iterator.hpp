@@ -23,8 +23,8 @@ namespace Lazy
         // types
 
         typedef List<SharedPtrSpec<TValue> > TBuffer;
-        typedef Command<TValue, TBuffer>::SRetValue TRetValue;
-        typedef Command<TValue, TBuffer>::SCommandRet TCommandRet;
+        typedef typename Command<TValue, TBuffer>::SRetValue TRetValue;
+        typedef typename Command<TValue, TBuffer>::SCommandRet TCommandRet;
         typedef Command<TValue, TBuffer> TCommand;
         typedef SharedPtr<Command<TValue, TBuffer> > TCommandPtr;
          
@@ -156,9 +156,9 @@ namespace Lazy
                 : it(_it), parent(_parent), command(_command) {}
         };
 
-        // statics
+        // methods
 
-        static TRetValue& _get_next(TRetValue& old, SharedPtr<STreeIterator>& it)
+        TRetValue& _get_next(TRetValue& old, SharedPtr<STreeIterator>& it) const
         {
             if (it.get() == NULL)
             {
