@@ -12,18 +12,15 @@ namespace Lazy
     template<typename TObject, typename TIterator>
     SharedPtrSpec<PyObject> iter(SharedPtrSpecCRef<PyObject> obj)
     {
-        SIter* it = new SIter;
-        it->it = obj->begin();
-        return SharedPtrSpec<SIter>(it);
+        // TODO: need ref count ?
+        return SharedPtrSpec<PyObject>(PyObject_GetIter(obj));
     }
 
     template<typename TIterator, typename TValue>
     SharedPtrSpec<PyObject> next(SharedPtrSpecCRef<PyObject> it)
     {
-        Vector<int>::iterator* val = new Vector<int>::iterator(it->it);
-        SharedPtrSpec<Vector<int>::iterator> ret(val);
-        ++it->it;
-        return ret;
+        // TODO: need ref count ?
+        return SharedPtrSpec<PyObject>(PyIter_Next(it.get()));
     }
 }
 
