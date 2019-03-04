@@ -56,3 +56,6 @@ lazy/Debug/boost_python.tlog/link.command.1.tlog
 lazy/Debug/boost_python.tlog/link.read.1.tlog
 lazy/Debug/boost_python.tlog/link.write.1.tlog
 lazy/Debug/vc140.pdb
+lazy/.vs/proj/v15/Solution.VC.db
+lazy/.vs/proj/v15/Solution.VC.db-shm
+lazy/.vs/proj/v15/Solution.VC.db-wal

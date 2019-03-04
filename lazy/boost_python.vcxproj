@@ -81,7 +81,9 @@
     <ClCompile Include="boost_python.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bind_python.h" />
     <ClInclude Include="commands.hpp" />
+    <ClInclude Include="defines_python.h" />
     <ClInclude Include="iterator.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Targets" />

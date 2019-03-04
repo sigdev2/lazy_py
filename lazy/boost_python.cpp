@@ -1,10 +1,5 @@
-/*#include "bind_boost.h"
+#include "bind_python.h"
 
-#include <iostream>
-#include <time.h>*/
-
-#define BOOST_PYTHON_STATIC_LIB
-#include <boost/python.hpp>
 
 char const* SayHello()
 {
