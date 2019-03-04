@@ -4,6 +4,7 @@
 #define __LAZY_DEFINES_PYTHON_H__
 
 #include <Python.h>
+#define BOOST_PYTHON_STATIC_LIB
 #include <boost/python.hpp>
 
 #include <assert.h>
