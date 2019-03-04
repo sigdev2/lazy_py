@@ -33,13 +33,13 @@ namespace Lazy
 
         // constructor/destructor
 
-        Iterator(SharedPtrSpecCRef<TObject> obj = NULL, Iterator* parent = NULL)
+        Iterator(TObject* obj = NULL, Iterator<TObject, TIterator, TValue>* parent = NULL)
            : _idx(0), _obj(obj), _parent(parent), _it(NULL) { _commands.reserve(eReservedCommands); reset(); }
         virtual ~Iterator() { }
 
         // properties
 
-        Iterator* parent() const { return _parent; }
+        Iterator<TObject, TIterator, TValue>* parent() const { return _parent; }
 
         // methods
 
@@ -201,7 +201,7 @@ namespace Lazy
         SharedPtrSpec<TObject> _obj;
         SharedPtr<STreeIterator> _it;
         Vector<TCommandPtr> _commands;
-        Iterator* _parent;
+        Iterator<TObject, TIterator, TValue>* _parent;
     };
 }
 

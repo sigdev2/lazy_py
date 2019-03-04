@@ -59,3 +59,6 @@ lazy/Debug/vc140.pdb
 lazy/.vs/proj/v15/Solution.VC.db
 lazy/.vs/proj/v15/Solution.VC.db-shm
 lazy/.vs/proj/v15/Solution.VC.db-wal
+lazy/.vs/proj/v15/Browse.VC.opendb
+lazy/.vs/proj/v15/ipch/AutoPCH/79c45ba864008190/BOOST_PYTHON.ipch
+lazy/Debug/boost_python.tlog/unsuccessfulbuild

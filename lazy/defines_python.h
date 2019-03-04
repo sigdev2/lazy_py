@@ -3,7 +3,7 @@
 #ifndef __LAZY_DEFINES_PYTHON_H__
 #define __LAZY_DEFINES_PYTHON_H__
 
-#define BOOST_PYTHON_STATIC_LIB
+#include <Python.h>
 #include <boost/python.hpp>
 
 #include <assert.h>
