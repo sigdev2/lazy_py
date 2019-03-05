@@ -38,4 +38,6 @@ using SharedPtrSpecCRef = const boost::python::handle<A>&;
 
 typedef std::exception Exception;
 
+#define THROW_STOP_ITERATION { PyErr_SetNone(PyExc_StopIteration); return NULL; }
+
 #endif // __LAZY_DEFINES_PYTHON_H__

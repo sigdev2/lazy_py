@@ -21,7 +21,7 @@ namespace Lazy
         return SharedPtrSpec<PyObject>(boost::python::borrowed(PyIter_Next(it.get())));
     }
 
-    typedef Lazy::Iterator<PyObject, PyObject, PyObject> TIterator;
+    typedef Lazy::InternalIterator<PyObject, PyObject, PyObject> TInternalIterator;
 }
 
 #endif // __LAZY_BIND_PYTHON_H__

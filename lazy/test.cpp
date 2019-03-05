@@ -3,7 +3,7 @@
 #include <iostream>
 #include <time.h>
 
-typedef Lazy::Iterator<Vector<int>, Lazy::SIter, Vector<int>::iterator> TVecIterator;
+typedef Lazy::InternalIterator<Vector<int>, Lazy::SIter, Vector<int>::iterator> TVecIterator;
 
 int main()
 {

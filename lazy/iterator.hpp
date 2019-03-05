@@ -15,7 +15,7 @@ namespace Lazy
     SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it) { _ass(false); return NULL; }
 
     template<class TObject, class TIterator, class TValue>
-    class Iterator
+    class InternalIterator
     {
     public:
         // types
@@ -33,17 +33,17 @@ namespace Lazy
 
         // constructor/destructor
 
-        Iterator(TObject* obj = NULL, Iterator<TObject, TIterator, TValue>* parent = NULL)
+        InternalIterator(TObject* obj = NULL, InternalIterator<TObject, TIterator, TValue>* parent = NULL)
            : _idx(0), _obj(obj), _parent(parent), _it(NULL) { _commands.reserve(eReservedCommands); reset(); }
-        virtual ~Iterator() { }
+        virtual ~InternalIterator() { }
 
         // properties
 
-        Iterator<TObject, TIterator, TValue>* parent() const { return _parent; }
+        InternalIterator<TObject, TIterator, TValue>* parent() const { return _parent; }
 
         // methods
 
-        Iterator<TObject, TIterator, TValue>* reset()
+        InternalIterator<TObject, TIterator, TValue>* reset()
         {
             if (_obj.get() != NULL)
                 _it.reset(new STreeIterator(iter<TObject, TIterator>(_obj)));
@@ -53,7 +53,7 @@ namespace Lazy
             return this;
         }
 
-        Iterator<TObject, TIterator, TValue>* clear()
+        InternalIterator<TObject, TIterator, TValue>* clear()
         {
             _commands.clear();
             _commands.shrink_to_fit();
@@ -61,7 +61,7 @@ namespace Lazy
             return reset();
         }
 
-        Iterator<TObject, TIterator, TValue>*  add(TCommandPtr cmd)
+        InternalIterator<TObject, TIterator, TValue>*  add(TCommandPtr cmd)
         {
             _commands.push_back(cmd);
             return this;
@@ -78,7 +78,7 @@ namespace Lazy
                 if (val.done)
                 {
                     if (_commands.empty())
-                        throw Exception("StopIteration");
+                        THROW_STOP_ITERATION;
                 }
                 else
                 {
@@ -105,7 +105,7 @@ namespace Lazy
                         }
 
                         if (ret.code == TCommand::eDone)
-                            throw Exception("StopIteration");
+                            THROW_STOP_ITERATION;
                         
                         if (ret.code == TCommand::eList)
                         {
@@ -201,7 +201,7 @@ namespace Lazy
         SharedPtrSpec<TObject> _obj;
         SharedPtr<STreeIterator> _it;
         Vector<TCommandPtr> _commands;
-        Iterator<TObject, TIterator, TValue>* _parent;
+        InternalIterator<TObject, TIterator, TValue>* _parent;
     };
 }
 

@@ -34,4 +34,6 @@ using SharedPtrSpecCRef = const std::shared_ptr<A>&;
 
 typedef std::exception Exception;
 
+#define THROW_STOP_ITERATION throw Exception("StopIteration")
+
 #endif // __LAZY_DEFINES_CPP_H__
