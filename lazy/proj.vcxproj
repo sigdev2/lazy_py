@@ -25,6 +25,7 @@
   <ItemGroup>
     <ClInclude Include="bind_cpp.h" />
     <ClInclude Include="commands.hpp" />
+    <ClInclude Include="Container.hpp" />
     <ClInclude Include="defines_cpp.h" />
     <ClInclude Include="iterator.hpp" />
   </ItemGroup>
