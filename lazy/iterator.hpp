@@ -9,17 +9,26 @@ namespace Lazy
 {
     // globals
 
-    template<typename TObject, typename TIterator>
-    SharedPtrSpec<TIterator> iter(SharedPtrSpecCRef<TObject> obj) { _ass(false); return NULL; }
-    template<typename TIterator, typename TValue>
-    SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it) { _ass(false); return NULL; }
-
     template<class TObject, class TIterator, class TValue>
+    class Iterable
+    {
+    public:
+        Iterable(SharedPtrSpecCRef<TObject> obj)
+            : _obj(obj) {}
+        TObject* get() { return _obj.get(); }
+        SharedPtrSpec<TIterator> iter() { _ass(false); return NULL; };
+        SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it) { _ass(false); return NULL; };
+    protected:
+        SharedPtrSpec<TObject> _obj;
+    };
+
+    template<class TIterable, class TObject, class TIterator, class TValue>
     class InternalIterator
     {
     public:
         // types
 
+        typedef TObject TObject;
         typedef List<SharedPtrSpec<TValue> > TBuffer;
         typedef typename Command<TValue, TBuffer>::SRetValue TRetValue;
         typedef typename Command<TValue, TBuffer>::SCommandRet TCommandRet;
@@ -33,27 +42,32 @@ namespace Lazy
 
         // constructor/destructor
 
-        InternalIterator(TObject* obj = NULL, InternalIterator<TObject, TIterator, TValue>* parent = NULL)
+        InternalIterator(SharedPtrSpecCRef<TObject> obj = NULL, InternalIterator<TIterable, TObject, TIterator, TValue>* parent = NULL)
            : _idx(0), _obj(obj), _parent(parent), _it(NULL) { _commands.reserve(eReservedCommands); reset(); }
         virtual ~InternalIterator() { }
 
         // properties
 
-        InternalIterator<TObject, TIterator, TValue>* parent() const { return _parent; }
+        InternalIterator<TIterable, TObject, TIterator, TValue>* parent() const { return _parent; }
 
         // methods
 
-        InternalIterator<TObject, TIterator, TValue>* reset()
+        InternalIterator<TIterable, TObject, TIterator, TValue>* self()
+        {
+            return this;
+        }
+
+        InternalIterator<TIterable, TObject, TIterator, TValue>* reset()
         {
             if (_obj.get() != NULL)
-                _it.reset(new STreeIterator(iter<TObject, TIterator>(_obj)));
+                _it.reset(new STreeIterator(_obj.iter()));
             else
                 _it.reset();
             _idx = 0;
             return this;
         }
 
-        InternalIterator<TObject, TIterator, TValue>* clear()
+        InternalIterator<TIterable, TObject, TIterator, TValue>* clear()
         {
             _commands.clear();
             _commands.shrink_to_fit();
@@ -61,7 +75,7 @@ namespace Lazy
             return reset();
         }
 
-        InternalIterator<TObject, TIterator, TValue>*  add(TCommandPtr cmd)
+        InternalIterator<TIterable, TObject, TIterator, TValue>*  add(TCommandPtr cmd)
         {
             _commands.push_back(cmd);
             return this;
@@ -111,7 +125,7 @@ namespace Lazy
                         {
                             if (!val.done && !buffer.empty())
                                 buffer.pop_back();
-                            SharedPtr<STreeIterator> it(new STreeIterator(iter<TValue, TIterator>(ret.val),
+                            SharedPtr<STreeIterator> it(new STreeIterator(ret.val.iter(ret.val),
                                                         _it, _it->command + 1));
                             _it = it;
                             // note: clear buffer is operation duty
@@ -172,7 +186,7 @@ namespace Lazy
                     try
                     {
                         old.done = false;
-                        old.val = Lazy::next<TIterator, TValue>(_it->it);
+                        old.val = _obj.next(_it->it);
                         break;
                     }
                     catch(...)
@@ -198,10 +212,10 @@ namespace Lazy
         // members
 
         int _idx;
-        SharedPtrSpec<TObject> _obj;
+        TIterable _obj;
         SharedPtr<STreeIterator> _it;
         Vector<TCommandPtr> _commands;
-        InternalIterator<TObject, TIterator, TValue>* _parent;
+        InternalIterator<TIterable, TObject, TIterator, TValue>* _parent;
     };
 }
 

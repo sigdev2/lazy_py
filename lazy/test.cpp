@@ -3,16 +3,24 @@
 #include <iostream>
 #include <time.h>
 
-typedef Lazy::InternalIterator<Vector<int>, Lazy::SIter, Vector<int>::iterator> TVecIterator;
+typedef Lazy::InternalIterator<Lazy::IterableÑpp<Vector<int>, Lazy::SIter, Vector<int>::iterator>, Vector<int>, Lazy::SIter, Vector<int>::iterator> TVecIterator;
 
 int main()
 {
-    SharedPtrSpec<Vector<int> > vec(new Vector<int>({1, 2, 3, 4, 5}));
     TVecIterator::TCommandPtr pCmd(new TVecIterator::TCommand());
-    TVecIterator* it = new TVecIterator(vec);
+    TVecIterator* it = new TVecIterator(SharedPtrSpec<Vector<int> >(new Vector<int>({ 1, 2, 3, 4, 5 })));
     it->add(pCmd);
-    for (int i = 0; i < 5; ++i)
-        std::cout << **(it->next());
+    while (true)
+    {
+        try
+        {
+            std::cout << **(it->next());
+        }
+        catch (...)
+        {
+            break;
+        }
+    }
     std::cout << std::endl;
     it->reset();
     Vector<int> dummy;

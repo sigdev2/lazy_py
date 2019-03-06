@@ -21,10 +21,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
+    <TargetName>Lazy</TargetName>
+    <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
+    <TargetName>Lazy</TargetName>
+    <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -37,7 +41,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>"$(_BOOST)/stage/lib";"$(Python27_32)/libs";%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)Lazy.pyd</OutputFile>
       <ShowProgress>NotSet</ShowProgress>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <RegisterOutput>false</RegisterOutput>
@@ -62,7 +66,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>"$(_BOOST)/stage/lib";"$(Python27_32)/libs";%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)Lazy.pyd</OutputFile>
       <ShowProgress>NotSet</ShowProgress>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <RegisterOutput>false</RegisterOutput>
