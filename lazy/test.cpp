@@ -3,18 +3,19 @@
 #include <iostream>
 #include <time.h>
 
-typedef Lazy::InternalIterator<Lazy::IterableÑpp<Vector<int>, Lazy::SIter, Vector<int>::iterator>, Vector<int>, Lazy::SIter, Vector<int>::iterator> TVecIterator;
+typedef Lazy::InternalIterator<Lazy::CppContainer> TVecIterator;
 
 int main()
 {
     TVecIterator::TCommandPtr pCmd(new TVecIterator::TCommand());
-    TVecIterator* it = new TVecIterator(SharedPtrSpec<Vector<int> >(new Vector<int>({ 1, 2, 3, 4, 5 })));
+    SharedPtr<Vector<int> > pVec(new Vector<int>({ 1, 2, 3, 4, 5 }));
+    TVecIterator* it = new TVecIterator(pVec.get());
     it->add(pCmd);
     while (true)
     {
         try
         {
-            std::cout << **(it->next());
+            std::cout << *(it->next());
         }
         catch (...)
         {
@@ -29,7 +30,7 @@ int main()
     for (int j = 0; j < 1000; ++j)
     {
         for (int i = 0; i < 5; ++i)
-            dummy.push_back(**(it->next()));
+            dummy.push_back(*(it->next()));
         it->reset();
     }
     std::cout << "CLOCKS_PER_SEC: " << CLOCKS_PER_SEC << std::endl;

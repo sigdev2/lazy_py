@@ -5,34 +5,25 @@
 
 #include "defines_cpp.h"
 
-#include "iterator.hpp"
+#include "InternalIterator.hpp"
 
 namespace Lazy
 {
-    struct SIter
+    class CppContainer : public Contaiter<Vector<int>, int, Vector<int>::iterator>
     {
-        Vector<int>::iterator it;
-    };
+    protected:
+        virtual Vector<int>::iterator _iter() const
+        {
+            return _source->begin();
+        }
 
-    template<class TObject, class TIterator, class TValue>
-    class Iterable—pp : public Iterable<TObject, TIterator, TValue>
-    {
-    public:
-        SharedPtrSpec<TIterator> iter()
+        virtual int _next(Vector<int>::iterator& it) const
         {
-            SIter* it = new SIter;
-            it->it = _obj->begin();
-            return SharedPtrSpec<SIter>(it);
-        };
-        SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it)
-        {
-            Vector<int>::iterator* val = new Vector<int>::iterator(it->it);
-            SharedPtrSpec<Vector<int>::iterator> ret(val);
-            ++it->it;
-            if (it->it == _obj->end())
+            ++it;
+            if (it == _source->end())
                 throw std::exception();
-            return ret;
-        };
+            return *it;
+        }
     };
 }
 

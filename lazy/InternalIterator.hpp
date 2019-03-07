@@ -3,37 +3,24 @@
 #ifndef __LAZY_ITERATOR_H__
 #define __LAZY_ITERATOR_H__
 
-#include "commands.hpp"
+#include "Container.hpp"
+#include "Command.hpp"
 
 namespace Lazy
 {
-    // globals
-
-    template<class TObject, class TIterator, class TValue>
-    class Iterable
-    {
-    public:
-        Iterable(SharedPtrSpecCRef<TObject> obj)
-            : _obj(obj) {}
-        TObject* get() { return _obj.get(); }
-        SharedPtrSpec<TIterator> iter() { _ass(false); return NULL; };
-        SharedPtrSpec<TValue> next(SharedPtrSpecCRef<TIterator> it) { _ass(false); return NULL; };
-    protected:
-        SharedPtrSpec<TObject> _obj;
-    };
-
-    template<class TIterable, class TObject, class TIterator, class TValue>
+    template<class TContainer>
     class InternalIterator
     {
+        typedef InternalIterator<TContainer> _Self;
     public:
         // types
-
-        typedef TObject TObject;
-        typedef List<SharedPtrSpec<TValue> > TBuffer;
-        typedef typename Command<TValue, TBuffer>::SRetValue TRetValue;
-        typedef typename Command<TValue, TBuffer>::SCommandRet TCommandRet;
-        typedef Command<TValue, TBuffer> TCommand;
-        typedef SharedPtr<Command<TValue, TBuffer> > TCommandPtr;
+        typedef TContainer::TCommand TCommand;
+        typedef TContainer::TCommandPtr TCommandPtr;
+        typedef TContainer::TRetValue TRetValue;
+        typedef TContainer::TCommandRet TCommandRet;
+        typedef TContainer::TBuffer TBuffer;
+        typedef TContainer::TSourcePtr TObjectPtr;
+        typedef TContainer::TItemPtr TValuePtr;
          
         enum EConst
         {
@@ -42,32 +29,28 @@ namespace Lazy
 
         // constructor/destructor
 
-        InternalIterator(SharedPtrSpecCRef<TObject> obj = NULL, InternalIterator<TIterable, TObject, TIterator, TValue>* parent = NULL)
+        InternalIterator(TObjectPtr obj = NULL, _Self* parent = NULL)
            : _idx(0), _obj(obj), _parent(parent), _it(NULL) { _commands.reserve(eReservedCommands); reset(); }
         virtual ~InternalIterator() { }
 
         // properties
 
-        InternalIterator<TIterable, TObject, TIterator, TValue>* parent() const { return _parent; }
+        _Self* parent() const { return _parent; }
+        _Self* self() const { return this; }
 
         // methods
 
-        InternalIterator<TIterable, TObject, TIterator, TValue>* self()
-        {
-            return this;
-        }
-
-        InternalIterator<TIterable, TObject, TIterator, TValue>* reset()
+        _Self* reset()
         {
             if (_obj.get() != NULL)
                 _it.reset(new STreeIterator(_obj.iter()));
             else
                 _it.reset();
-            _idx = 0;
+            _idx = -1;
             return this;
         }
 
-        InternalIterator<TIterable, TObject, TIterator, TValue>* clear()
+        _Self* clear()
         {
             _commands.clear();
             _commands.shrink_to_fit();
@@ -75,13 +58,13 @@ namespace Lazy
             return reset();
         }
 
-        InternalIterator<TIterable, TObject, TIterator, TValue>*  add(TCommandPtr cmd)
+        _Self* add(TCommandPtr cmd)
         {
             _commands.push_back(cmd);
             return this;
         }
 
-        SharedPtrSpec<TValue> next()
+        TValuePtr next()
         {
             TRetValue val(NULL, true);
             TBuffer buffer;
@@ -160,11 +143,11 @@ namespace Lazy
 
         struct STreeIterator
         {
-            SharedPtrSpec<TIterator> it;
+            TContainer::SIterator it;
             SharedPtr<STreeIterator> parent;
             size_t command;
 
-            STreeIterator(SharedPtrSpecCRef<TIterator> _it = NULL,
+            STreeIterator(const TContainer::SIterator& _it,
                           SharedPtrCRef<STreeIterator> _parent = NULL,
                           size_t _command = 0)
                 : it(_it), parent(_parent), command(_command) {}
@@ -177,7 +160,7 @@ namespace Lazy
             if (_it.get() == NULL)
             {
                 old.done = true;
-                old.val.reset();
+                old.val = NULL;
             }
             else
             {
@@ -186,16 +169,16 @@ namespace Lazy
                     try
                     {
                         old.done = false;
-                        old.val = _obj.next(_it->it);
+                        old.val = _it->it.next();
                         break;
                     }
                     catch(...)
                     {
                         old.done = true;
-                        if (_it->parent == NULL)
+                        if (_it->parent.get() == NULL)
                         {
-                            old.val.reset();
-                            _it.reset();
+                            old.val = NULL;
+                            _it = NULL;
                             break;
                         }
                         else
@@ -212,10 +195,10 @@ namespace Lazy
         // members
 
         int _idx;
-        TIterable _obj;
+        TContainer _obj;
         SharedPtr<STreeIterator> _it;
         Vector<TCommandPtr> _commands;
-        InternalIterator<TIterable, TObject, TIterator, TValue>* _parent;
+        _Self* _parent;
     };
 }
 

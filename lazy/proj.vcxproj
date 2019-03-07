@@ -24,10 +24,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bind_cpp.h" />
-    <ClInclude Include="commands.hpp" />
+    <ClInclude Include="Command.hpp" />
     <ClInclude Include="Container.hpp" />
     <ClInclude Include="defines_cpp.h" />
-    <ClInclude Include="iterator.hpp" />
+    <ClInclude Include="InternalIterator.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Targets" />
 </Project>

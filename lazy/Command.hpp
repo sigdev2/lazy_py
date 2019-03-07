@@ -1,14 +1,18 @@
 #pragma once
 
-#ifndef __LAZY_COMMANDS_H__
-#define __LAZY_COMMANDS_H__
+#ifndef __LAZY_COMMAND_H__
+#define __LAZY_COMMAND_H__
 
 namespace Lazy
 {
-    template<typename TValue, typename TBuffer>
+    template<typename TValuePtr>
     class Command
     {
     public:
+        typedef List<TValuePtr> TBuffer;
+        
+        typedef TValuePtr TValuePtr;
+
         enum ECommandRet
         {
             eDone,
@@ -20,17 +24,17 @@ namespace Lazy
 
         struct SCommandRet
         {
-            SCommandRet(SharedPtrSpecCRef<TValue> _val, ECommandRet _code)
+            SCommandRet(TValuePtr _val, ECommandRet _code)
                 : val(_val), code(_code) {};
-            SharedPtrSpec<TValue> val;
+            TValuePtr val;
             ECommandRet code;
         };
         
         struct SRetValue
         {
-            SRetValue(SharedPtrSpecCRef<TValue> _val, bool _done)
+            SRetValue(TValuePtr _val, bool _done)
                 : val(_val), done(_done) {};
-            SharedPtrSpec<TValue> val;
+            TValuePtr val;
             bool done;
         };
 
@@ -43,4 +47,4 @@ namespace Lazy
     };
 }
 
-#endif // __LAZY_COMMANDS_H__
+#endif // __LAZY_COMMAND_H__

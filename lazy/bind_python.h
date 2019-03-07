@@ -5,7 +5,7 @@
 
 #include "defines_python.h"
 
-#include "iterator.hpp"
+#include "InternalIterator.hpp"
 
 namespace Lazy
 {
